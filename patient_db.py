@@ -10,11 +10,8 @@ def create_table():
     conn = sqlite3.connect("patients.db")
     cursor = conn.cursor()
 
-    # Drop old table (fixes schema mismatch)
-    cursor.execute("DROP TABLE IF EXISTS patients")
-
     cursor.execute("""
-    CREATE TABLE patients (
+    CREATE TABLE IF NOT EXISTS patients (
         patient_id TEXT PRIMARY KEY,
         name TEXT,
         age INTEGER,
