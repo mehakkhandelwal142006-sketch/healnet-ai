@@ -4,10 +4,16 @@ import streamlit as st
 import random
 
 # ─── InfluxDB Cloud Configuration (from Streamlit Secrets) ───
-url = st.secrets["https://us-east-1-1.aws.cloud2.influxdata.com"]
-token = st.secrets["nhMnRR10-oZu29KBOzdWLvglc-XQaugoshd9_0ny9oHCrY4TfWqH1yXYX6Byw8ZfEf0WMnbMaMgeTX4WW1rsyQ=="]
-org = st.secrets["healnet-org"]
-bucket = st.secrets["healnet"]
+import streamlit as st
+from influxdb_client import InfluxDBClient, Point
+from influxdb_client.client.write_api import SYNCHRONOUS
+import random
+
+# ─── InfluxDB Cloud Configuration ───
+url = st.secrets["INFLUX_URL"]
+token = st.secrets["INFLUX_TOKEN"]
+org = st.secrets["INFLUX_ORG"]
+bucket = st.secrets["INFLUX_BUCKET"]
 
 client = InfluxDBClient(url=url, token=token, org=org)
 
