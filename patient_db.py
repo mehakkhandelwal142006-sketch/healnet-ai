@@ -5,11 +5,16 @@ import pandas as pd
 # ───────── CREATE TABLE ─────────
 def create_table():
 
+    import sqlite3
+
     conn = sqlite3.connect("patients.db")
     cursor = conn.cursor()
 
+    # Drop old table (fixes schema mismatch)
+    cursor.execute("DROP TABLE IF EXISTS patients")
+
     cursor.execute("""
-    CREATE TABLE IF NOT EXISTS patients (
+    CREATE TABLE patients (
         patient_id TEXT PRIMARY KEY,
         name TEXT,
         age INTEGER,
