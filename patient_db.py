@@ -38,10 +38,25 @@ def add_patient(pid, name, age, gender, contact):
 
 def get_all_patients():
 
-    conn = sqlite3.connect(DB_NAME)
+    conn = sqlite3.connect("patients.db")
 
-    df = pd.read_sql("SELECT * FROM patients", conn)
+    df = pd.read_sql_query("SELECT * FROM patients", conn)
 
     conn.close()
 
     return df
+
+def delete_patient(patient_id):
+
+    import sqlite3
+
+    conn = sqlite3.connect("patients.db")
+    cursor = conn.cursor()
+
+    cursor.execute(
+        "DELETE FROM patients WHERE patient_id = ?",
+        (patient_id,)
+    )
+
+    conn.commit()
+    conn.close()
