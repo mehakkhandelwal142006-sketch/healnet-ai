@@ -1,13 +1,13 @@
-from influxdb_client import InfluxDBClient, Point, WritePrecision
+from influxdb_client import InfluxDBClient, Point
 from influxdb_client.client.write_api import SYNCHRONOUS
+import streamlit as st
 import random
-import os
 
-# ─── InfluxDB Configuration ───
-url = "http://localhost:8086"
-token = "b7kTRovNbLUNwB8TB57OsmHGVUHpl-JFUssxpTGxihMo7EOCQB_07IUxzMxl6eDPfCB20IvQxJgl7xk-sZZP6w=="
-org = "healnet-org"
-bucket = "healnet"
+# ─── InfluxDB Cloud Configuration (from Streamlit Secrets) ───
+url = st.secrets["https://us-east-1-1.aws.cloud2.influxdata.com"]
+token = st.secrets["nhMnRR10-oZu29KBOzdWLvglc-XQaugoshd9_0ny9oHCrY4TfWqH1yXYX6Byw8ZfEf0WMnbMaMgeTX4WW1rsyQ=="]
+org = st.secrets["healnet-org"]
+bucket = st.secrets["healnet"]
 
 client = InfluxDBClient(url=url, token=token, org=org)
 
@@ -60,6 +60,11 @@ def get_vitals(patient_id):
 
     vitals = {}
 
+    for table in tables:
+        for record in table.records:
+            vitals[record.get_field()] = record.get_value()
+
+    return vitals
     for table in tables:
         for record in table.records:
             vitals[record.get_field()] = record.get_value()
