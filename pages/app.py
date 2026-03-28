@@ -27,7 +27,6 @@ def send_alert_email(patient_name, alerts):
         sender = st.secrets["gmail"]["sender"]
         password = st.secrets["gmail"]["app_password"]
 
-        # Create email
         msg = MIMEMultipart()
         msg["From"] = sender
         msg["To"] = sender
@@ -48,7 +47,6 @@ def send_alert_email(patient_name, alerts):
 
         msg.attach(MIMEText(body, "plain"))
 
-        # Send email
         server = smtplib.SMTP("smtp.gmail.com", 587)
         server.starttls()
         server.login(sender, password)
@@ -68,7 +66,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# ───────────── GLOBAL DARK TECH THEME ─────────────
+# ───────────── GLOBAL DARK TECH THEME (unchanged) ─────────────
 
 st.markdown("""
 <style>
@@ -217,7 +215,6 @@ st.markdown("""
   strong { color: var(--cyan) !important; }
   .stRadio > div { gap: 4px !important; }
 
-  /* ── Alert Bell Animation ── */
   @keyframes bell-shake {
     0%,100% { transform: rotate(0deg); }
     20%      { transform: rotate(-18deg); }
@@ -227,7 +224,6 @@ st.markdown("""
   }
   .alert-bell { display:inline-block; animation: bell-shake 0.9s ease infinite; }
 
-  /* ── Alert Banner ── */
   .alert-banner {
     background: rgba(255,69,96,0.10);
     border: 1px solid rgba(255,69,96,0.5);
@@ -242,7 +238,6 @@ st.markdown("""
   .alert-sent-msg    { font-size: 0.72rem; color: #00ff9d; margin-top: 5px; }
   .alert-err-msg     { font-size: 0.72rem; color: #ff4560; margin-top: 5px; }
 
-  /* ── Alert Log ── */
   .alert-log { background: rgba(255,69,96,0.06); border: 1px solid rgba(255,69,96,0.3); border-radius: 10px; padding: 14px 18px; margin-top: 10px; }
   .alert-log-title { font-family: 'Orbitron', sans-serif; font-size: 0.72rem; color: #ff4560; letter-spacing: 0.1em; margin-bottom: 8px; }
   .alert-entry { font-size: 0.78rem; color: #f5c518; padding: 4px 0; border-bottom: 1px solid rgba(255,69,96,0.1); letter-spacing: 0.02em; }
@@ -266,23 +261,10 @@ user = sess.get("user") or {}
 org  = sess.get("org")  or {}
 
 # ═══════════════════════════════════════════════
-#   GMAIL ALERT SYSTEM
+#   GMAIL ALERT SYSTEM  ── LIGHT / WHITE EMAIL
 # ═══════════════════════════════════════════════
 
 def send_gmail_alert(recipient_email: str, patient_name: str, patient_id: str, alerts: list):
-    """
-    Sends a styled HTML alert email via Gmail SMTP SSL.
-
-    Setup (one-time):
-      1. Enable 2-Step Verification on your Google account.
-      2. Go to myaccount.google.com → Security → App Passwords.
-      3. Create an App Password for "Mail".
-      4. Add to .streamlit/secrets.toml:
-
-            [gmail]
-            sender       = "phagnariya@gmail.com"
-            app_password = "ydakfzfgleutdqsn"
-    """
     try:
         sender_email    = st.secrets["gmail"]["sender"]
         sender_password = st.secrets["gmail"]["app_password"]
@@ -291,71 +273,95 @@ def send_gmail_alert(recipient_email: str, patient_name: str, patient_id: str, a
 
     timestamp = datetime.datetime.now().strftime("%d %b %Y, %I:%M %p")
 
-    # Build vital rows for the email table
+    # ── Build vital rows ──
     rows_html = ""
     for a in alerts:
-        color = "#ff4560" if a["level"] in ("HIGH", "CRITICAL") else "#f5c518"
+        is_critical  = a["level"] in ("HIGH", "CRITICAL")
+        badge_color  = "#dc2626" if is_critical else "#b45309"
+        badge_bg     = "#fef2f2" if is_critical else "#fffbeb"
+        badge_border = "#fca5a5" if is_critical else "#fde68a"
         rows_html += f"""
         <tr>
-          <td style="padding:10px 14px;border-bottom:1px solid #0d2a4a;color:#e0f4ff;font-size:14px;">{a['vital']}</td>
-          <td style="padding:10px 14px;border-bottom:1px solid #0d2a4a;color:#00d4ff;font-size:14px;font-weight:600;">{a['value']}</td>
-          <td style="padding:10px 14px;border-bottom:1px solid #0d2a4a;">
-            <span style="background:{color}22;color:{color};border:1px solid {color}55;
-                         padding:3px 10px;border-radius:4px;font-size:12px;
-                         font-weight:700;letter-spacing:0.08em;">{a['level']}</span>
+          <td style="padding:11px 16px;border-bottom:1px solid #f3f4f6;
+                     font-size:14px;color:#111827;font-weight:500;">{a['vital']}</td>
+          <td style="padding:11px 16px;border-bottom:1px solid #f3f4f6;
+                     font-size:14px;color:#dc2626;font-weight:700;">{a['value']}</td>
+          <td style="padding:11px 16px;border-bottom:1px solid #f3f4f6;">
+            <span style="background:{badge_bg};color:{badge_color};
+                         border:1px solid {badge_border};padding:3px 10px;
+                         border-radius:4px;font-size:12px;font-weight:700;
+                         letter-spacing:0.06em;">{a['level']}</span>
           </td>
-          <td style="padding:10px 14px;border-bottom:1px solid #0d2a4a;color:#7eb8d4;font-size:13px;">{a['message']}</td>
+          <td style="padding:11px 16px;border-bottom:1px solid #f3f4f6;
+                     font-size:13px;color:#6b7280;">{a['message']}</td>
         </tr>"""
 
+    # ══ WHITE / LIGHT EMAIL TEMPLATE ══
     html_body = f"""<!DOCTYPE html>
 <html>
-<body style="margin:0;padding:0;background:#040d1a;font-family:Arial,sans-serif;">
-<div style="max-width:640px;margin:30px auto;background:#071428;
-            border:1px solid rgba(0,200,255,0.22);border-radius:14px;overflow:hidden;">
+<body style="margin:0;padding:0;background:#f3f4f6;font-family:Arial,Helvetica,sans-serif;">
 
-  <!-- Red accent bar -->
-  <div style="height:3px;background:linear-gradient(90deg,transparent,#ff4560,transparent);"></div>
+<div style="max-width:640px;margin:32px auto;background:#ffffff;
+            border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;
+            box-shadow:0 4px 16px rgba(0,0,0,0.07);">
+
+  <!-- Red top bar -->
+  <div style="height:4px;background:#dc2626;"></div>
 
   <!-- Header -->
-  <div style="background:#0a1e3a;padding:22px 26px;border-bottom:1px solid rgba(0,200,255,0.15);">
-    <div style="font-size:11px;color:#7eb8d4;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:6px;">
-      HealNet AI · Automated Health Alert
+  <div style="background:#fef2f2;padding:22px 28px;border-bottom:1px solid #fca5a5;">
+    <div style="font-size:11px;color:#9ca3af;letter-spacing:0.1em;
+                text-transform:uppercase;margin-bottom:6px;">
+      HealNet AI &nbsp;·&nbsp; Automated Health Alert
     </div>
-    <div style="font-size:20px;font-weight:700;color:#ff4560;letter-spacing:0.06em;">
-      🚨 CRITICAL VITALS DETECTED
+    <div style="font-size:20px;font-weight:700;color:#dc2626;">
+      🚨 Critical Vitals Detected
     </div>
   </div>
 
   <!-- Patient info -->
-  <div style="padding:18px 26px;border-bottom:1px solid rgba(0,200,255,0.1);">
+  <div style="padding:20px 28px;border-bottom:1px solid #f3f4f6;">
     <table style="width:100%;border-collapse:collapse;font-size:13px;">
       <tr>
-        <td style="padding:4px 0;color:#7eb8d4;width:100px;text-transform:uppercase;letter-spacing:0.08em;font-size:11px;">Patient</td>
-        <td style="padding:4px 0;color:#e0f4ff;font-weight:600;">{patient_name}</td>
+        <td style="padding:5px 0;width:110px;color:#9ca3af;text-transform:uppercase;
+                   letter-spacing:0.08em;font-size:11px;font-weight:600;">Patient</td>
+        <td style="padding:5px 0;color:#111827;font-weight:600;">{patient_name}</td>
       </tr>
       <tr>
-        <td style="padding:4px 0;color:#7eb8d4;text-transform:uppercase;letter-spacing:0.08em;font-size:11px;">Patient ID</td>
-        <td style="padding:4px 0;color:#00d4ff;font-weight:700;letter-spacing:0.06em;">{patient_id}</td>
+        <td style="padding:5px 0;color:#9ca3af;text-transform:uppercase;
+                   letter-spacing:0.08em;font-size:11px;font-weight:600;">Patient ID</td>
+        <td style="padding:5px 0;color:#dc2626;font-weight:700;letter-spacing:0.04em;">{patient_id}</td>
       </tr>
       <tr>
-        <td style="padding:4px 0;color:#7eb8d4;text-transform:uppercase;letter-spacing:0.08em;font-size:11px;">Timestamp</td>
-        <td style="padding:4px 0;color:#e0f4ff;">{timestamp}</td>
+        <td style="padding:5px 0;color:#9ca3af;text-transform:uppercase;
+                   letter-spacing:0.08em;font-size:11px;font-weight:600;">Timestamp</td>
+        <td style="padding:5px 0;color:#374151;">{timestamp}</td>
       </tr>
     </table>
   </div>
 
-  <!-- Vitals table -->
-  <div style="padding:18px 26px;">
-    <div style="font-size:11px;color:#ff4560;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:10px;">
+  <!-- Flagged vitals -->
+  <div style="padding:20px 28px;">
+    <div style="font-size:11px;color:#dc2626;text-transform:uppercase;
+                letter-spacing:0.1em;font-weight:700;margin-bottom:12px;">
       ⚠ Flagged Vitals
     </div>
-    <table style="width:100%;border-collapse:collapse;background:#0a1e3a;border-radius:8px;overflow:hidden;">
+    <table style="width:100%;border-collapse:collapse;
+                  border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">
       <thead>
-        <tr style="background:rgba(255,69,96,0.1);">
-          <th style="padding:9px 14px;text-align:left;color:#7eb8d4;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;border-bottom:1px solid rgba(255,69,96,0.2);">Vital</th>
-          <th style="padding:9px 14px;text-align:left;color:#7eb8d4;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;border-bottom:1px solid rgba(255,69,96,0.2);">Value</th>
-          <th style="padding:9px 14px;text-align:left;color:#7eb8d4;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;border-bottom:1px solid rgba(255,69,96,0.2);">Status</th>
-          <th style="padding:9px 14px;text-align:left;color:#7eb8d4;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;border-bottom:1px solid rgba(255,69,96,0.2);">Note</th>
+        <tr style="background:#f9fafb;">
+          <th style="padding:10px 16px;text-align:left;color:#6b7280;font-size:11px;
+                     text-transform:uppercase;letter-spacing:0.08em;font-weight:600;
+                     border-bottom:1px solid #e5e7eb;">Vital</th>
+          <th style="padding:10px 16px;text-align:left;color:#6b7280;font-size:11px;
+                     text-transform:uppercase;letter-spacing:0.08em;font-weight:600;
+                     border-bottom:1px solid #e5e7eb;">Value</th>
+          <th style="padding:10px 16px;text-align:left;color:#6b7280;font-size:11px;
+                     text-transform:uppercase;letter-spacing:0.08em;font-weight:600;
+                     border-bottom:1px solid #e5e7eb;">Status</th>
+          <th style="padding:10px 16px;text-align:left;color:#6b7280;font-size:11px;
+                     text-transform:uppercase;letter-spacing:0.08em;font-weight:600;
+                     border-bottom:1px solid #e5e7eb;">Note</th>
         </tr>
       </thead>
       <tbody>{rows_html}</tbody>
@@ -363,19 +369,20 @@ def send_gmail_alert(recipient_email: str, patient_name: str, patient_id: str, a
   </div>
 
   <!-- Action note -->
-  <div style="margin:0 26px 18px;background:rgba(255,69,96,0.08);border:1px solid rgba(255,69,96,0.28);
-              border-radius:8px;padding:12px 14px;">
-    <div style="color:#ff4560;font-size:13px;font-weight:600;">
-      🏥 Immediate review recommended for <strong style="color:#e0f4ff;">{patient_name}</strong>.
+  <div style="margin:0 28px 20px;background:#fef2f2;border:1px solid #fca5a5;
+              border-radius:8px;padding:14px 16px;">
+    <div style="color:#dc2626;font-size:13px;font-weight:700;">
+      🏥 Immediate review recommended for
+      <span style="color:#111827;font-weight:700;">{patient_name}</span>.
     </div>
-    <div style="color:#7eb8d4;font-size:12px;margin-top:3px;">
+    <div style="color:#6b7280;font-size:12px;margin-top:4px;">
       Please log into HealNet AI for full vitals history and clinical notes.
     </div>
   </div>
 
   <!-- Footer -->
-  <div style="padding:12px 26px;border-top:1px solid rgba(0,200,255,0.1);background:#040d1a;">
-    <div style="font-size:11px;color:#3a6a8a;letter-spacing:0.05em;">
+  <div style="padding:14px 28px;border-top:1px solid #f3f4f6;background:#f9fafb;">
+    <div style="font-size:11px;color:#9ca3af;letter-spacing:0.04em;">
       Automated alert from HealNet AI. Do not reply to this email.
     </div>
   </div>
@@ -402,11 +409,6 @@ def send_gmail_alert(recipient_email: str, patient_name: str, patient_id: str, a
 
 
 def check_and_alert(patient_name, patient_id, vitals_map, recipient_email, cooldown_seconds=300):
-    """
-    Scans vitals_map for HIGH / CRITICAL readings.
-    Sends one Gmail alert per cooldown window per patient.
-    Returns list of triggered alert dicts for in-app display.
-    """
     triggered = [
         {"vital": vname, "value": val, "level": lvl, "message": msg}
         for vname, (val, lvl, msg) in vitals_map.items()
@@ -447,7 +449,6 @@ st.sidebar.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# ── Alert settings ──
 st.sidebar.markdown("""
 <div style="font-size:0.63rem;color:#3a6a8a;letter-spacing:0.12em;
             text-transform:uppercase;padding:6px 4px 2px;margin-top:4px;">
@@ -605,7 +606,6 @@ elif page == "Health Monitoring":
         rr_level,   rr_msg   = classify_respiratory_rate(resp)
         bmi_level,  bmi_msg  = classify_bmi(bmi)
 
-        # ── Build vitals map for alert engine ──
         vitals_map = {
             "Blood Pressure":   (f"{systolic}/{diastolic} mmHg", bp_level,   bp_msg),
             "Heart Rate":       (f"{heart} bpm",                  hr_level,   hr_msg),
@@ -615,15 +615,13 @@ elif page == "Health Monitoring":
             "Respiratory Rate": (f"{resp} breaths/min",           rr_level,   rr_msg),
             "BMI":              (f"{bmi}",                        bmi_level,  bmi_msg),
         }
-          # ── Ensure alert settings exist ──
+
         alerts_enabled = st.session_state.get("alerts_enabled", False)
-        alert_email = st.session_state.get("alert_email", "")
-        # ── Fire alert check ──
-        
+        alert_email    = st.session_state.get("alert_email", "")
+
         recipient        = alert_email if (alerts_enabled and alert_email) else ""
         triggered_alerts = check_and_alert(patient_name, patient_id, vitals_map, recipient)
 
-        # ── In-app alert banner ──
         if triggered_alerts:
             st.toast(" Critical health alert detected!", icon="🚨")
             lines = "  |  ".join(f"{a['vital']}: {a['value']} [{a['level']}]" for a in triggered_alerts)
@@ -647,18 +645,17 @@ elif page == "Health Monitoring":
             </div>
             """, unsafe_allow_html=True)
 
-        # ── Vital cards ──
         COLOR = {"NORMAL":"🟢","MODERATE":"🟡","LOW":"🔵","HIGH":"🔴","CRITICAL":"🚨"}
 
         def vital_card(label, value, level, message):
-            icon       = COLOR.get(level, "⚪")
-            bell       = " 🔔" if level in ("HIGH", "CRITICAL") else ""
+            icon = COLOR.get(level, "⚪")
+            bell = " 🔔" if level in ("HIGH", "CRITICAL") else ""
             if level == "NORMAL":
-                st.success(f"*{label}* &nbsp;·&nbsp; {value} &nbsp;→&nbsp; {icon} {level} — {message}")
+                st.success(f"{label} &nbsp;·&nbsp; {value} &nbsp;→&nbsp; {icon} {level} — {message}")
             elif level in ("MODERATE", "LOW"):
-                st.warning(f"*{label}* &nbsp;·&nbsp; {value} &nbsp;→&nbsp; {icon} {level} — {message}")
+                st.warning(f"{label} &nbsp;·&nbsp; {value} &nbsp;→&nbsp; {icon} {level} — {message}")
             else:
-                st.error(f"*{label}{bell}* &nbsp;·&nbsp; {value} &nbsp;→&nbsp; {icon} {level} — {message}")
+                st.error(f"{label}{bell} &nbsp;·&nbsp; {value} &nbsp;→&nbsp; {icon} {level} — {message}")
 
         c1, c2 = st.columns(2)
         with c1:
@@ -667,9 +664,9 @@ elif page == "Health Monitoring":
             vital_card("SpO₂",            f"{spo2}%",                      spo2_level, spo2_msg)
             vital_card("Temperature",     f"{temp}°F",                     tmp_level,  tmp_msg)
         with c2:
-            vital_card("Blood Sugar",      f"{sugar} mg/dL",       sg_level,  sg_msg)
-            vital_card("Respiratory Rate", f"{resp} breaths/min",  rr_level,  rr_msg)
-            vital_card("BMI",              f"{bmi}",               bmi_level, bmi_msg)
+            vital_card("Blood Sugar",      f"{sugar} mg/dL",      sg_level,  sg_msg)
+            vital_card("Respiratory Rate", f"{resp} breaths/min", rr_level,  rr_msg)
+            vital_card("BMI",              f"{bmi}",              bmi_level, bmi_msg)
 
         st.divider()
         st.subheader("🩺 OVERALL HEALTH STATUS")
@@ -689,7 +686,6 @@ elif page == "Health Monitoring":
         else:
             st.success("✅ All vitals within normal range")
 
-        # ── Expandable alert detail log ──
         if triggered_alerts:
             with st.expander("📋 View Alert Details"):
                 st.markdown('<div class="alert-log"><div class="alert-log-title">🔔 TRIGGERED ALERTS THIS SESSION</div>', unsafe_allow_html=True)
@@ -737,8 +733,8 @@ elif page == "Register Patient":
             registered_by = user.get("name") or org.get("name") or "Admin"
             ok, err = add_patient(pid, pname, age, gender, contact, blood, registered_by)
             if ok:
-                st.success(f"✅ Patient *{pname}* registered successfully — ID: *{pid}*")
-                st.info("Navigate to *Patient Records* to view all registered patients.")
+                st.success(f"✅ Patient {pname} registered successfully — ID: {pid}")
+                st.info("Navigate to Patient Records to view all registered patients.")
             else:
                 st.error(f"❌ {err}")
 
@@ -782,7 +778,7 @@ elif page == "Patient Records":
             if st.button("DELETE", type="primary"):
                 if del_id:
                     delete_patient(del_id)
-                    st.success(f"Patient *{del_id}* deleted.")
+                    st.success(f"Patient {del_id} deleted.")
                     st.rerun()
                 else:
                     st.error("Enter a Patient ID first.")
