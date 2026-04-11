@@ -4,6 +4,8 @@ import datetime
 import smtplib
 import pandas as pd
 import os
+import sys, os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
@@ -1313,20 +1315,39 @@ elif page == "Health Monitoring":
     patient_name = patient_id
 
 # -----------------------------
+# -----------------------------
 # 📊 MONITORING
 # -----------------------------
+
+    import time
+
+# ✅ Write fresh data to InfluxDB
     write_vitals(patient_id)
 
+# ✅ Fetch data
     engine = RealTimeEngine(mode="simulated")
     vitals = engine.fetch(patient_id)
-    data = vitals["data"]
 
-# ✅ Check
+# 🚨 SAFETY CHECK (VERY IMPORTANT FOR CLOUD)
+    if not vitals:
+        st.warning("No vitals data received from device.")
+        st.stop()
+
+# ✅ Safe extraction
+    data = vitals.get("data", {})
+
+# 🚨 SECOND SAFETY CHECK
     if not data:
-       st.warning("No vitals data received from device.")
-       st.stop()
+        st.warning("Vitals data is empty.")
+        st.stop()
 
-# ✅ Extract values
+# ✅ Show timestamp & source
+    st.caption(f"🕒 Last Updated: {vitals.get('timestamp', 'N/A')}")
+    st.caption(f"📡 Source: {vitals.get('source', 'Unknown')}")
+
+# -----------------------------
+# ✅ EXTRACT VALUES (FIXED)
+# -----------------------------
     systolic  = data.get("systolic", 0)
     diastolic = data.get("diastolic", 0)
     heart     = data.get("heart_rate", 0)
@@ -1339,28 +1360,30 @@ elif page == "Health Monitoring":
 
     bmi = round(weight / ((height / 100) ** 2), 1) if height > 0 else 0
 
-# ================= UI ================= #
-
+# -----------------------------
+# 📊 UI
+# -----------------------------
     st.subheader("📊 Live Readings")
 
 # Row 1
-    m1, m2, m3, m4 = st.columns(4)
-    m1.metric("Systolic",    f"{systolic}",  "mmHg")
-    m2.metric("Diastolic",   f"{diastolic}", "mmHg")
-    m3.metric("Heart Rate",  f"{heart}",     "bpm")
-    m4.metric("SpO₂",        f"{spo2}",      "%")
+    col1, col2, col3, col4 = st.columns(4)
+    col1.metric("Systolic", systolic, "mmHg")
+    col2.metric("Diastolic", diastolic, "mmHg")
+    col3.metric("Heart Rate", heart, "bpm")
+    col4.metric("SpO₂", spo2, "%")
 
 # Row 2
-    m5, m6, m7, m8 = st.columns(4)
-    m5.metric("Blood Sugar", f"{sugar}",     "mg/dL")
-    m6.metric("Temp",        f"{temp}",      "°F")
-    m7.metric("Resp. Rate",  f"{resp}",      "br/min")
-    m8.metric("BMI",         f"{bmi}",       "")
+    col5, col6, col7, col8 = st.columns(4)
+    col5.metric("Blood Sugar", sugar, "mg/dL")
+    col6.metric("Temp", temp, "°F")
+    col7.metric("Resp. Rate", resp, "br/min")
+    col8.metric("BMI", bmi)
 
     st.markdown("---")
 
-# ================= CLASSIFICATION ================= #
-
+# -----------------------------
+# 🧠 CLASSIFICATION
+# -----------------------------
     bp_level,   bp_msg   = classify_bp(systolic, diastolic)
     hr_level,   hr_msg   = classify_heart_rate(heart)
     spo2_level, spo2_msg = classify_spo2(spo2)
@@ -1370,7 +1393,7 @@ elif page == "Health Monitoring":
     bmi_level,  bmi_msg  = classify_bmi(bmi)
 
     vitals_map = {
-    "Blood Pressure":   (f"{systolic}/{diastolic} mmHg", bp_level,   bp_msg),
+        "Blood Pressure":   (f"{systolic}/{diastolic} mmHg", bp_level,   bp_msg),
     "Heart Rate":       (f"{heart} bpm",                  hr_level,   hr_msg),
     "SpO₂":             (f"{spo2}%",                      spo2_level, spo2_msg),
     "Temperature":      (f"{temp}°F",                     tmp_level,  tmp_msg),
@@ -1379,25 +1402,27 @@ elif page == "Health Monitoring":
     "BMI":              (f"{bmi}",                        bmi_level,  bmi_msg),
 }
 
-# ================= ALERTS ================= #
+# -----------------------------
+# 🚨 ALERTS
+# -----------------------------
+    patient_name = patient_id  # simple fix
 
-    recip     = st.session_state.alert_email if st.session_state.alerts_enabled else ""
+    recip     = st.session_state.get("alert_email", "")
     triggered = check_and_alert(patient_name, patient_id, vitals_map, recip)
 
     if triggered:
         st.toast("🚨 Critical vital detected!", icon="🔔")
 
-# ================= STATUS ================= #
-
+# -----------------------------
+# 📊 STATUS CARDS
+# -----------------------------
     st.subheader("◈ Vital Sign Status")
 
     def vital_card(label, value, unit, level, message):
-        bell = " 🔔" if level in ("HIGH","CRITICAL") else ""
-        text = f"**{label}{bell}** — {value} {unit}  \n{level}: {message}"
-
+        text = f"**{label}** — {value} {unit}\n{level}: {message}"
         if level == "NORMAL":
             st.success(text)
-        elif level in ("MODERATE","LOW"):
+        elif level in ("MODERATE", "LOW"):
             st.warning(text)
         else:
             st.error(text)
@@ -1415,12 +1440,13 @@ elif page == "Health Monitoring":
         vital_card("Respiratory Rate", f"{resp}", "breaths/min", rr_level, rr_msg)
         vital_card("BMI", f"{bmi}", "", bmi_level, bmi_msg)
 
-# ================= OVERALL STATUS ================= #
-
+# -----------------------------
+# 🧾 OVERALL STATUS
+# -----------------------------
     st.subheader("◈ Overall Health Status")
 
     all_levels     = [bp_level, hr_level, spo2_level, sg_level, tmp_level, rr_level, bmi_level]
-    severity_order = ["CRITICAL","HIGH","MODERATE","LOW","NORMAL"]
+    severity_order = ["CRITICAL", "HIGH", "MODERATE", "LOW", "NORMAL"]
 
     overall = min(all_levels, key=lambda l: severity_order.index(l))
 
@@ -1435,16 +1461,16 @@ elif page == "Health Monitoring":
     else:
         st.success("✅ NORMAL — All vitals within healthy range.")
 
-# ================= AUTO REFRESH ================= #
-
+# -----------------------------
+# 🔄 AUTO REFRESH
+# -----------------------------
     if auto_refresh:
         time.sleep(refresh_seconds)
         st.rerun()
-
 # ─────────────────────────────────────────────────────
 #  REPORT ANALYSIS
 # ─────────────────────────────────────────────────────
-    elif page == "Report Analysis":
+elif page == "Report Analysis":
         breadcrumb(["Dashboard","Report Analysis"], "Report Analysis")
         st.html('<div class="page-header"><h1>🔬 AI Medical Report Analysis</h1></div>')
         st.markdown("Upload an X-ray or scan image for AI-powered diagnostic assessment.")
