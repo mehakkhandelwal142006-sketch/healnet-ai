@@ -143,19 +143,9 @@ S("screen","entry"); S("session",None); S("msg",None); S("msg_type","error")
 S("otp_code",None); S("otp_target",None); S("otp_user_type",None); S("otp_expiry",None); S("reset_username",None)
 def go(s): st.session_state.screen=s; st.session_state.msg=None
 def alert(m,t="error"): st.session_state.msg=m; st.session_state.msg_type=t
-def do_login(kind, user=None, org=None):
-
-    # Create session
-    st.session_state.session = {
-        "kind": kind,
-        "user": user,
-        "org": org
-    }
-
-    # Clear message
-    st.session_state.msg = None
-
-    # OPEN DASHBOARD PAGE (app.py inside pages folder)
+def do_login(kind,user=None,org=None):
+    st.session_state.session={"kind":kind,"user":user,"org":org}
+    st.session_state.screen="dashboard"; st.session_state.msg=None
     st.switch_page("pages/app.py")
 def show_msg():
     if st.session_state.msg:
@@ -215,6 +205,65 @@ def screen_entry():
     logo(); card_open()
     st.markdown('<div class="hn-card-title" style="font-size:22px;color:#ffffff;">Welcome to HealNet</div>', unsafe_allow_html=True)
     st.markdown('<div class="hn-card-sub" style="font-size:15px;color:#ffffff;">Select your account type to continue.</div>', unsafe_allow_html=True)
+    # Equal-size glowy option buttons
+    st.markdown("""
+    <style>
+    div[data-testid="opt_org"] > button,
+    div[data-testid="opt_staff"] > button,
+    div[data-testid="opt_orgpatient"] > button,
+    div[data-testid="opt_solo"] > button {
+        width: 100% !important;
+        min-height: 72px !important;
+        height: 72px !important;
+        text-align: left !important;
+        white-space: pre-line !important;
+        line-height: 1.5 !important;
+        padding: 14px 18px !important;
+        border-radius: 13px !important;
+        font-family: 'Inter', sans-serif !important;
+        font-size: 15px !important;
+        font-weight: 600 !important;
+        margin-bottom: 9px !important;
+        transition: all .22s ease !important;
+        cursor: pointer !important;
+        background: rgba(4,16,60,0.65) !important;
+        border: 1.5px solid rgba(0,180,220,0.28) !important;
+        color: rgba(255,255,255,0.88) !important;
+        backdrop-filter: blur(8px) !important;
+        display: flex !important;
+        align-items: center !important;
+        box-sizing: border-box !important;
+    }
+    div[data-testid="opt_org"] > button:hover {
+        background: rgba(13,148,136,0.22) !important;
+        border-color: rgba(13,148,136,0.75) !important;
+        box-shadow: 0 0 18px rgba(13,148,136,0.5), 0 0 6px rgba(13,148,136,0.3) !important;
+        transform: translateY(-2px) !important;
+        color: #ffffff !important;
+    }
+    div[data-testid="opt_staff"] > button:hover {
+        background: rgba(59,130,246,0.2) !important;
+        border-color: rgba(59,130,246,0.7) !important;
+        box-shadow: 0 0 18px rgba(59,130,246,0.45), 0 0 6px rgba(59,130,246,0.25) !important;
+        transform: translateY(-2px) !important;
+        color: #ffffff !important;
+    }
+    div[data-testid="opt_orgpatient"] > button:hover {
+        background: rgba(139,92,246,0.2) !important;
+        border-color: rgba(139,92,246,0.7) !important;
+        box-shadow: 0 0 18px rgba(139,92,246,0.45), 0 0 6px rgba(139,92,246,0.25) !important;
+        transform: translateY(-2px) !important;
+        color: #ffffff !important;
+    }
+    div[data-testid="opt_solo"] > button:hover {
+        background: rgba(245,158,11,0.18) !important;
+        border-color: rgba(245,158,11,0.7) !important;
+        box-shadow: 0 0 18px rgba(245,158,11,0.45), 0 0 6px rgba(245,158,11,0.25) !important;
+        transform: translateY(-2px) !important;
+        color: #ffffff !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
     for key,title,sub in [
         ("org",       "Organisation",        "Hospital / Clinic  ·  Manage staff and patients"),
         ("staff",     "Doctor / Staff",       "Needs Org Code  ·  You work at a registered facility"),
@@ -738,28 +787,189 @@ def divider(label=""):
 
 
 # ════════════════════════════════════════════════════════════════
-# SCREEN: ENTRY
+# SCREEN: ENTRY — Unified login card (matches HealNet design)
 # ════════════════════════════════════════════════════════════════
 def screen_entry():
     card_open()
     card_logo()
-    st.markdown('<div class="card-title">Welcome</div>', unsafe_allow_html=True)
-    st.markdown('<div class="card-sub">Select your account type to continue.</div>', unsafe_allow_html=True)
-    OPTIONS = [
-        ("org",        "Organisation",         "(Hospital / Clinic)"),
-        ("staff",      "Doctor / Staff",       "(Requires Org Code)"),
-        ("orgpatient", "Hospital Patient",     "(Requires Org Code)"),
-        ("solo",       "Individual / Personal","(No code needed)"),
-    ]
-    for key, title, sub in OPTIONS:
-        if st.button(f"{title}\n{sub}", key=f"opt_{key}"):
-            go(key); st.rerun()
-    st.markdown('''
-    <div class="note-box">
-      If a hospital gave you a code, select <em>Patient at a Hospital</em>.
-      No code at all, select <em>Individual / Personal</em>.
-    </div>
-    ''', unsafe_allow_html=True)
+
+    # Role-tab selector
+    tab_labels = ["Organization", "Doctor / Staff", "Individual / Personal"]
+    role_map   = ["org", "staff", "solo"]
+
+    if "login_role_idx" not in st.session_state:
+        st.session_state.login_role_idx = 2  # default: Individual / Personal
+
+    # Render styled tab pills — equal size, invisible borders, aligned
+    st.markdown("""
+    <style>
+    /* Global rule: all secondary buttons inside the role-tab row */
+    div[data-testid="stHorizontalBlock"] button[kind="secondary"] {
+        width: 100% !important;
+        height: 44px !important;
+        min-height: 44px !important;
+        max-height: 44px !important;
+        border-radius: 10px !important;
+        padding: 0 8px !important;
+        font-size: 13px !important;
+        font-weight: 600 !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        margin-bottom: 18px !important;
+        border: 1.5px solid transparent !important;
+        background: rgba(255,255,255,0.06) !important;
+        color: rgba(255,255,255,0.55) !important;
+        transition: all .18s ease !important;
+        line-height: 1 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        box-sizing: border-box !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+    col_tabs = st.columns([1, 1, 1])
+    for i, (label, col) in enumerate(zip(tab_labels, col_tabs)):
+        with col:
+            is_active = (st.session_state.login_role_idx == i)
+            key = f"role_tab_{i}"
+            # Per-button active/inactive style injected by unique key
+            active_style = (
+                "background:rgba(0,180,220,0.20) !important;"
+                "border:1.5px solid rgba(0,180,220,0.6) !important;"
+                "color:#ffffff !important;"
+                "box-shadow:0 0 12px rgba(0,180,220,0.3) !important;"
+            ) if is_active else (
+                "background:rgba(255,255,255,0.06) !important;"
+                "border:1.5px solid transparent !important;"
+                "color:rgba(255,255,255,0.5) !important;"
+            )
+            st.markdown(f"""<style>
+            button[data-testid="{key}"] {{
+                {active_style}
+            }}
+            </style>""", unsafe_allow_html=True)
+            if st.button(label, key=key, type="secondary"):
+                st.session_state.login_role_idx = i
+                st.rerun()
+
+    st.markdown('<div class="card-title" style="margin-top:4px;">Log in to your account</div>', unsafe_allow_html=True)
+
+    show_msg()
+
+    selected_role = role_map[st.session_state.login_role_idx]
+
+    # Email / Username field
+    if selected_role == "org":
+        u = st.text_input("", placeholder="✉  Username", key="entry_u",
+                          label_visibility="collapsed")
+    else:
+        u = st.text_input("", placeholder="✉  Email Address", key="entry_u",
+                          label_visibility="collapsed")
+
+    p = st.text_input("", placeholder="🔒  Password", type="password",
+                      key="entry_p", label_visibility="collapsed")
+
+    # Org-code field only for staff / orgpatient
+    org_code_val = ""
+    if selected_role in ("staff", "orgpatient"):
+        org_code_val = st.text_input("", placeholder="🏥  Organisation Code (e.g. HN-XXXXX)",
+                                     key="entry_code", label_visibility="collapsed")
+
+    st.markdown(
+        """<div style="text-align:right;margin:-6px 0 18px;">
+             <a href="#" style="color:rgba(255,255,255,0.6);font-size:13px;
+                text-decoration:none;">Forgot Password?</a>
+           </div>""",
+        unsafe_allow_html=True,
+    )
+
+    if st.button("Continue", key="entry_continue", type="primary"):
+        if not u or not p:
+            alert("Please enter your credentials."); st.rerun()
+        else:
+            if selected_role == "org":
+                con = db()
+                row = con.execute(
+                    "SELECT * FROM organisations WHERE username=? AND password=?",
+                    (u, hp(p))
+                ).fetchone()
+                con.close()
+                if row: do_login("org", org=dict(row)); st.rerun()
+                else: alert("Invalid username or password."); st.rerun()
+
+            elif selected_role == "staff":
+                if not org_code_val:
+                    alert("Please enter your Organisation Code."); st.rerun()
+                org = org_by_code(org_code_val)
+                if not org:
+                    alert("Invalid organisation code."); st.rerun()
+                else:
+                    con = db()
+                    row = con.execute(
+                        "SELECT * FROM staff WHERE username=? AND password=? AND org_id=?",
+                        (u, hp(p), org["id"])
+                    ).fetchone()
+                    con.close()
+                    if row: do_login("staff", user=dict(row), org=org); st.rerun()
+                    else: alert("Invalid credentials."); st.rerun()
+
+            elif selected_role == "orgpatient":
+                if not org_code_val:
+                    alert("Please enter your Organisation Code."); st.rerun()
+                org = org_by_code(org_code_val)
+                if not org:
+                    alert("Invalid organisation code."); st.rerun()
+                else:
+                    con = db()
+                    row = con.execute(
+                        "SELECT * FROM org_patients WHERE username=? AND password=? AND org_id=?",
+                        (u, hp(p), org["id"])
+                    ).fetchone()
+                    con.close()
+                    if row: do_login("orgpatient", user=dict(row), org=org); st.rerun()
+                    else: alert("Invalid credentials."); st.rerun()
+
+            else:  # solo — accept email OR username
+                con = db()
+                row = con.execute(
+                    "SELECT * FROM solo_users WHERE (username=? OR email=?) AND password=?",
+                    (u, u, hp(p))
+                ).fetchone()
+                con.close()
+                if row:
+                    do_login("solo", user=dict(row),
+                             org={"name": "HealNet Personal", "org_code": "PERSONAL"})
+                    st.rerun()
+                else:
+                    alert("No account found. Please sign up first."); st.rerun()
+
+    # ── Forgot-password OTP flow ──
+    st.markdown('<div style="text-align:right;margin-top:-8px;margin-bottom:10px;">', unsafe_allow_html=True)
+    if st.button("Forgot Password?", key="entry_fp", type="secondary"):
+        go("forgot"); st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    # Sign-up link — real button
+    st.markdown(
+        '<hr style="border:none;border-top:1px solid rgba(255,255,255,0.1);margin:18px 0 14px;">',
+        unsafe_allow_html=True,
+    )
+    col_l, col_r = st.columns([3, 2])
+    with col_l:
+        st.markdown(
+            '<p style="color:rgba(255,255,255,0.55);font-size:14px;margin-top:8px;">'
+            "Don't have an account?</p>",
+            unsafe_allow_html=True,
+        )
+    with col_r:
+        if st.button("Sign Up", key="entry_signup", type="primary"):
+            # carry the current role tab over to signup screen
+            st.session_state["signup_role_idx"] = st.session_state.get("login_role_idx", 2)
+            go("signup"); st.rerun()
+
     card_close()
 
 
@@ -1277,8 +1487,210 @@ def screen_reset_password():
 # ════════════════════════════════════════════════════════════════
 # ROUTER
 # ════════════════════════════════════════════════════════════════
+
+# ════════════════════════════════════════════════════════════════
+# SCREEN: SIGN UP — Role-aware registration
+# ════════════════════════════════════════════════════════════════
+def screen_signup():
+    card_open()
+    card_logo()
+
+    if st.button("← Back to Login", key="signup_back", type="secondary"):
+        go("entry"); st.rerun()
+
+    st.markdown('<div class="card-title" style="margin-top:10px;">Create your account</div>', unsafe_allow_html=True)
+    st.markdown('<div class="card-sub">Choose your account type and fill in your details.</div>', unsafe_allow_html=True)
+
+    show_msg()
+
+    tab_labels = ["Organisation", "Doctor / Staff", "Individual / Personal"]
+    role_map   = ["org", "staff", "solo"]
+
+    if "signup_role_idx" not in st.session_state:
+        st.session_state.signup_role_idx = 2
+
+    # Role tab pills — equal size, invisible borders, aligned
+    cols = st.columns([1, 1, 1])
+    for i, (label, col) in enumerate(zip(tab_labels, cols)):
+        with col:
+            is_active = (st.session_state.signup_role_idx == i)
+            key = f"sup_tab_{i}"
+            active_style = (
+                "background:rgba(0,180,220,0.20) !important;"
+                "border:1.5px solid rgba(0,180,220,0.6) !important;"
+                "color:#ffffff !important;"
+                "box-shadow:0 0 12px rgba(0,180,220,0.3) !important;"
+            ) if is_active else (
+                "background:rgba(255,255,255,0.06) !important;"
+                "border:1.5px solid transparent !important;"
+                "color:rgba(255,255,255,0.5) !important;"
+            )
+            st.markdown(f"""<style>
+            button[data-testid="{key}"] {{
+                {active_style}
+                width: 100% !important;
+                height: 44px !important;
+                min-height: 44px !important;
+                max-height: 44px !important;
+                border-radius: 10px !important;
+                padding: 0 8px !important;
+                font-size: 13px !important;
+                font-weight: 600 !important;
+                white-space: nowrap !important;
+                overflow: hidden !important;
+                text-overflow: ellipsis !important;
+                margin-bottom: 14px !important;
+                line-height: 1 !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                box-sizing: border-box !important;
+            }}
+            </style>""", unsafe_allow_html=True)
+            if st.button(label, key=key, type="secondary"):
+                st.session_state.signup_role_idx = i
+                st.rerun()
+
+    role = role_map[st.session_state.signup_role_idx]
+
+    # ── ORGANISATION ──────────────────────────────────────────────
+    if role == "org":
+        n   = st.text_input("Organisation Name *", placeholder="City General Hospital", key="sup_org_n")
+        ru  = st.text_input("Username *", placeholder="admin", key="sup_org_u")
+        re  = st.text_input("Contact Email *", placeholder="admin@hospital.com", key="sup_org_e")
+        rp  = st.text_input("Password *", type="password", placeholder="Min. 6 characters", key="sup_org_p")
+        rp2 = st.text_input("Confirm Password *", type="password", placeholder="Repeat password", key="sup_org_p2")
+        st.markdown("<br>", unsafe_allow_html=True)
+        if st.button("Register Organisation", key="sup_org_btn", type="primary"):
+            if not all([n, ru, re, rp, rp2]):
+                alert("⚠️ All fields are required."); st.rerun()
+            elif "@" not in re:
+                alert("⚠️ Enter a valid email."); st.rerun()
+            elif rp != rp2:
+                alert("⚠️ Passwords do not match."); st.rerun()
+            elif len(rp) < 6:
+                alert("⚠️ Password must be at least 6 characters."); st.rerun()
+            else:
+                con = db()
+                try:
+                    code = gen_code()
+                    con.execute(
+                        "INSERT INTO organisations(name,username,password,org_code,email) VALUES(?,?,?,?,?)",
+                        (n, ru, hp(rp), code, re)
+                    )
+                    con.commit()
+                    alert(f"✅ Registered! Org Code: {code} — share with your staff & patients.", "success")
+                except sqlite3.IntegrityError:
+                    alert("⚠️ Username already exists. Try another.")
+                finally:
+                    con.close()
+                st.rerun()
+
+    # ── DOCTOR / STAFF ────────────────────────────────────────────
+    elif role == "staff":
+        rc  = st.text_input("Organisation Code *", placeholder="HN-XXXXX", key="sup_st_code")
+        rn  = st.text_input("Full Name *", placeholder="Dr. Jane Smith", key="sup_st_name")
+        rph = st.text_input("Phone (optional)", placeholder="+91 98765 43210", key="sup_st_phone")
+        ru  = st.text_input("Username *", placeholder="choose a username", key="sup_st_u")
+        rp  = st.text_input("Password *", type="password", placeholder="Min. 6 characters", key="sup_st_p")
+        rp2 = st.text_input("Confirm Password *", type="password", placeholder="Repeat password", key="sup_st_p2")
+        st.markdown("<br>", unsafe_allow_html=True)
+        if st.button("Create Staff Account", key="sup_st_btn", type="primary"):
+            if not all([rc, rn, ru, rp, rp2]):
+                alert("⚠️ Organisation code, name, username and password are required."); st.rerun()
+            elif rp != rp2:
+                alert("⚠️ Passwords do not match."); st.rerun()
+            elif len(rp) < 6:
+                alert("⚠️ Password must be at least 6 characters."); st.rerun()
+            else:
+                org = org_by_code(rc)
+                if not org:
+                    alert("⚠️ Invalid organisation code."); st.rerun()
+                else:
+                    con = db()
+                    count = con.execute("SELECT COUNT(*) FROM staff WHERE org_id=?", (org["id"],)).fetchone()[0]
+                    sid = "ST-" + str(count + 1).zfill(4)
+                    try:
+                        con.execute(
+                            "INSERT INTO staff(org_id,name,username,password,role,phone,staff_id) VALUES(?,?,?,?,?,?,?)",
+                            (org["id"], rn, ru, hp(rp), "Staff", rph, sid)
+                        )
+                        con.commit()
+                        alert(f"✅ Account created! Staff ID: {sid}. Please log in.", "success")
+                    except sqlite3.IntegrityError:
+                        alert("⚠️ Username already exists in this organisation.")
+                    finally:
+                        con.close()
+                    st.rerun()
+
+    # ── INDIVIDUAL / PERSONAL ─────────────────────────────────────
+    else:
+        rn  = st.text_input("Full Name *", placeholder="Your full name", key="sup_sl_name")
+        re  = st.text_input("Email Address *", placeholder="you@example.com", key="sup_sl_email")
+        c1, c2 = st.columns(2)
+        with c1: rg  = st.selectbox("Gender", ["Female", "Male", "Other"], key="sup_sl_gender")
+        with c2: rd  = st.text_input("Date of Birth", placeholder="DD/MM/YYYY", key="sup_sl_dob")
+        c3, c4 = st.columns(2)
+        with c3: rb  = st.text_input("Blood Group", placeholder="e.g. O+", key="sup_sl_blood")
+        with c4: rph = st.text_input("Phone", placeholder="+91 98765 43210", key="sup_sl_phone")
+        st.markdown('<div style="height:1px;background:rgba(255,255,255,0.12);margin:14px 0;"></div>', unsafe_allow_html=True)
+        ru  = st.text_input("Username *", placeholder="choose a username", key="sup_sl_u")
+        rp  = st.text_input("Password *", type="password", placeholder="Min. 6 characters", key="sup_sl_p")
+        rp2 = st.text_input("Confirm Password *", type="password", placeholder="Repeat password", key="sup_sl_p2")
+        st.markdown("<br>", unsafe_allow_html=True)
+        if st.button("Create My Account", key="sup_sl_btn", type="primary"):
+            if not all([rn, re, ru, rp, rp2]):
+                alert("⚠️ Name, email, username and password are required."); st.rerun()
+            elif "@" not in re or "." not in re:
+                alert("⚠️ Enter a valid email address."); st.rerun()
+            elif rp != rp2:
+                alert("⚠️ Passwords do not match."); st.rerun()
+            elif len(rp) < 6:
+                alert("⚠️ Password must be at least 6 characters."); st.rerun()
+            else:
+                con = db()
+                count = con.execute("SELECT COUNT(*) FROM solo_users").fetchone()[0]
+                hid = "HN-" + str(count + 1).zfill(5)
+                try:
+                    con.execute(
+                        "INSERT INTO solo_users(name,email,username,password,gender,dob,blood,contact,healnet_id) VALUES(?,?,?,?,?,?,?,?,?)",
+                        (rn, re, ru, hp(rp), rg, rd, rb, rph, hid)
+                    )
+                    con.commit()
+                    alert(f"✅ Account created! HealNet ID: {hid}. Please log in.", "success")
+                    go("entry"); st.rerun()
+                except sqlite3.IntegrityError as e:
+                    if "email" in str(e).lower():
+                        alert("⚠️ This email is already registered.")
+                    elif "username" in str(e).lower():
+                        alert("⚠️ This username is already taken. Try another.")
+                    else:
+                        alert("⚠️ Email or username already registered.")
+                finally:
+                    con.close()
+                st.rerun()
+
+    st.markdown(
+        '<hr style="border:none;border-top:1px solid rgba(255,255,255,0.1);margin:20px 0 14px;">',
+        unsafe_allow_html=True,
+    )
+    col_l, col_r = st.columns([3, 2])
+    with col_l:
+        st.markdown(
+            '<p style="color:rgba(255,255,255,0.55);font-size:14px;margin-top:8px;">'
+            "Already have an account?</p>",
+            unsafe_allow_html=True,
+        )
+    with col_r:
+        if st.button("Log In", key="signup_to_login", type="primary"):
+            go("entry"); st.rerun()
+
+    card_close()
+
+
 SCREENS = {
     "entry":          screen_entry,
+    "signup":         screen_signup,
     "org":            screen_org,
     "staff":          screen_staff,
     "orgpatient":     screen_orgpatient,
