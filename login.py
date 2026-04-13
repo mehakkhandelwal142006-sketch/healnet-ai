@@ -146,7 +146,7 @@ def alert(m,t="error"): st.session_state.msg=m; st.session_state.msg_type=t
 def do_login(kind,user=None,org=None):
     st.session_state.session={"kind":kind,"user":user,"org":org}
     st.session_state.screen="dashboard"; st.session_state.msg=None
-    st.switch_page("pages/app.py")
+    st.switch_page("app.py")
 def show_msg():
     if st.session_state.msg:
         t=st.session_state.msg_type
@@ -863,14 +863,14 @@ def screen_entry():
 
     # Email / Username field
     if selected_role == "org":
-        u = st.text_input("", placeholder="✉  Username", key="entry_u",
-                          label_visibility="collapsed")
+        u = st.text_input("Username", placeholder="✉ Username", key="entry_u",
+                      label_visibility="collapsed")
     else:
-        u = st.text_input("", placeholder="✉  Email Address", key="entry_u",
-                          label_visibility="collapsed")
+        u = st.text_input("Email", placeholder="✉ Email Address", key="entry_u",
+                      label_visibility="collapsed")
 
-    p = st.text_input("", placeholder="🔒  Password", type="password",
-                      key="entry_p", label_visibility="collapsed")
+    p = st.text_input("Password", placeholder="🔒 Password", type="password",
+                  key="entry_p", label_visibility="collapsed")
 
     # Org-code field only for staff / orgpatient
     org_code_val = ""
