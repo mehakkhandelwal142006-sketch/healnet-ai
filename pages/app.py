@@ -453,25 +453,68 @@ def send_gmail_alert(recipient, patient_name, patient_id, alerts):
         return False, str(e)
 
 def check_and_alert(patient_name, patient_id, vitals_map, recipient, cooldown=300):
-    triggered = [
-        {"vital": n, "value": v, "level": l, "message": m}
-        for n, (v, l, m) in vitals_map.items() if l in ("HIGH", "CRITICAL")
-    ]
-    if not triggered:
-        return []
-    key_cd, key_ok, key_err = f"last_alert_{patient_id}", f"alert_ok_{patient_id}", f"alert_err_{patient_id}"
-    now  = time.time()
-    last = st.session_state.get(key_cd, 0)
-    if recipient and (now - last > cooldown):
-        ok, err = send_gmail_alert(recipient, patient_name, patient_id, triggered)
-        st.session_state[key_cd] = now
+    """
+    Upgraded alert engine:
+    - Categorises vitals into Critical / Warning / Normal
+    - Sends email only for Critical/HIGH alerts (with cooldown)
+    - Logs every alert cycle to st.session_state["alert_log"]
+    Returns: (critical_alerts, warning_alerts)
+    """
+    now_dt    = datetime.datetime.now()
+    timestamp = now_dt.strftime("%d %b %Y, %I:%M:%S %p")
+    raw_ts    = now_dt.strftime("%Y%m%d%H%M%S")
+
+    critical_alerts, warning_alerts = [], []
+    for n, (v, l, m) in vitals_map.items():
+        if l in ("CRITICAL", "HIGH"):
+            critical_alerts.append({"vital": n, "value": v, "level": l, "message": m, "category": "Critical"})
+        elif l in ("MODERATE", "LOW"):
+            warning_alerts.append({"vital": n, "value": v, "level": l, "message": m, "category": "Warning"})
+
+    # ── Email (Critical only, with cooldown) ──────────────────────────
+    email_sent, email_error = False, ""
+    key_cd, key_ok, key_err = (
+        f"last_alert_{patient_id}",
+        f"alert_ok_{patient_id}",
+        f"alert_err_{patient_id}",
+    )
+    if critical_alerts and recipient and (time.time() - st.session_state.get(key_cd, 0) > cooldown):
+        ok, err = send_gmail_alert(recipient, patient_name, patient_id, critical_alerts)
+        st.session_state[key_cd] = time.time()
+        email_sent, email_error  = ok, err
         if ok:
             st.session_state[key_ok] = True
             st.session_state.pop(key_err, None)
         else:
             st.session_state[key_err] = err
             st.session_state.pop(key_ok, None)
-    return triggered
+
+    # ── Log to alert history (de-duplicate on rapid re-runs) ─────────
+    last_raw = st.session_state.get(f"last_log_ts_{patient_id}", "")
+    all_new  = critical_alerts + warning_alerts
+    if all_new and (not last_raw or (int(raw_ts) - int(last_raw)) >= 30):
+        alert_log = st.session_state.get("alert_log", [])
+        for a in all_new:
+            alert_log.insert(0, {
+                "raw_timestamp": raw_ts,
+                "timestamp":     timestamp,
+                "patient_id":    patient_id,
+                "patient_name":  patient_name,
+                "vital":         a["vital"],
+                "value":         a["value"],
+                "category":      a["category"],
+                "level":         a["level"],
+                "message":       a["message"],
+                "email_sent":    email_sent if a["category"] == "Critical" else False,
+                "email_error":   email_error if a["category"] == "Critical" else "",
+                "acknowledged":  False,
+                "ack_by":        "",
+                "ack_time":      "",
+            })
+        st.session_state["alert_log"]              = alert_log[:300]
+        st.session_state[f"last_log_ts_{patient_id}"] = raw_ts
+
+    return critical_alerts, warning_alerts
 
 # ─────────────────────────────────────────────────────
 #  SESSION GUARD & DEFAULTS
@@ -494,6 +537,7 @@ _ss("monitoring_queue",   [])         # list of patient_id strings in queue
 _ss("monitoring_active",  False)
 _ss("alert_email",        "")
 _ss("alerts_enabled",     True)
+_ss("alert_log",          [])          # persistent alert history
 _ss("pm_view",            "list")     # patient mgmt sub-view: list | detail | edit | add
 _ss("pm_detail_id",       None)       # patient ID open in detail/edit view
 
@@ -1402,16 +1446,166 @@ elif page == "Health Monitoring":
     "BMI":              (f"{bmi}",                        bmi_level,  bmi_msg),
 }
 
-# -----------------------------
-# 🚨 ALERTS
-# -----------------------------
-    patient_name = patient_id  # simple fix
+# ─────────────────────────────────────────────────────
+# 🚨  ALERT SYSTEM (Upgraded)
+# ─────────────────────────────────────────────────────
+    patient_name = patient_id   # use patient_id as display name
 
-    recip     = st.session_state.get("alert_email", "")
-    triggered = check_and_alert(patient_name, patient_id, vitals_map, recip)
+    recip = st.session_state.get("alert_email", "")
+    critical_alerts, warning_alerts = check_and_alert(
+        patient_name, patient_id, vitals_map, recip
+    )
 
-    if triggered:
-        st.toast("🚨 Critical vital detected!", icon="🔔")
+    st.markdown("---")
+    st.subheader("🚨 Alert System")
+
+    # ── Category summary badges ─────────────────────────────────────
+    n_critical = len(critical_alerts)
+    n_warning  = len(warning_alerts)
+    n_normal   = sum(1 for _, (_, l, _) in vitals_map.items() if l == "NORMAL")
+
+    badge_col1, badge_col2, badge_col3 = st.columns(3)
+    badge_col1.metric("🔴 Critical", n_critical,
+                      help="Vitals at CRITICAL or HIGH level — immediate action required")
+    badge_col2.metric("🟡 Warning",  n_warning,
+                      help="Vitals at MODERATE or LOW level — close observation needed")
+    badge_col3.metric("✅ Normal",   n_normal,
+                      help="Vitals within healthy range")
+
+    # ── Active alert cards with Acknowledge buttons ─────────────────
+    if critical_alerts or warning_alerts:
+        if critical_alerts:
+            st.toast("🚨 Critical vital detected!", icon="🔔")
+
+        if critical_alerts:
+            st.markdown("#### 🔴 Critical Alerts")
+            for i, a in enumerate(critical_alerts):
+                c_msg, c_btn = st.columns([5, 1])
+                with c_msg:
+                    st.error(
+                        f"**{a['vital']}** — {a['value']}  \n"
+                        f"🔴 **{a['level']}**: {a['message']}"
+                    )
+                with c_btn:
+                    if st.button("✔ Ack", key=f"ack_crit_{patient_id}_{i}",
+                                 help="Acknowledge this alert"):
+                        log = st.session_state.get("alert_log", [])
+                        for entry in log:
+                            if (entry["vital"] == a["vital"]
+                                    and entry["patient_id"] == patient_id
+                                    and not entry["acknowledged"]):
+                                entry["acknowledged"] = True
+                                entry["ack_by"]  = sess.get("username", "Staff")
+                                entry["ack_time"] = datetime.datetime.now().strftime("%I:%M %p")
+                                break
+                        st.session_state["alert_log"] = log
+                        st.toast(f"✔ '{a['vital']}' alert acknowledged", icon="✅")
+                        st.rerun()
+
+        if warning_alerts:
+            st.markdown("#### 🟡 Warning Alerts")
+            for i, a in enumerate(warning_alerts):
+                w_msg, w_btn = st.columns([5, 1])
+                with w_msg:
+                    st.warning(
+                        f"**{a['vital']}** — {a['value']}  \n"
+                        f"🟡 **{a['level']}**: {a['message']}"
+                    )
+                with w_btn:
+                    if st.button("✔ Ack", key=f"ack_warn_{patient_id}_{i}",
+                                 help="Acknowledge this alert"):
+                        log = st.session_state.get("alert_log", [])
+                        for entry in log:
+                            if (entry["vital"] == a["vital"]
+                                    and entry["patient_id"] == patient_id
+                                    and not entry["acknowledged"]):
+                                entry["acknowledged"] = True
+                                entry["ack_by"]  = sess.get("username", "Staff")
+                                entry["ack_time"] = datetime.datetime.now().strftime("%I:%M %p")
+                                break
+                        st.session_state["alert_log"] = log
+                        st.toast(f"✔ '{a['vital']}' alert acknowledged", icon="✅")
+                        st.rerun()
+
+        # Email status feedback
+        if st.session_state.get(f"alert_ok_{patient_id}"):
+            st.html('<div class="email-status-ok">✅ Alert email sent successfully to the configured address.</div>')
+        elif st.session_state.get(f"alert_err_{patient_id}"):
+            err_msg = st.session_state[f"alert_err_{patient_id}"]
+            st.html(f'<div class="email-status-err">⚠️ Email delivery failed: {err_msg}</div>')
+        elif recip and critical_alerts:
+            st.html('<div class="email-status-ok">📧 Email queued (cooldown active — next send in a few minutes).</div>')
+        elif not recip and critical_alerts:
+            st.html('<div class="email-status-err">📧 No alert email configured. Add one in the sidebar.</div>')
+    else:
+        st.success("✅ All vitals are within normal or acceptable range. No active alerts.")
+
+    # ── Alert History / Log Table ───────────────────────────────────
+    st.markdown("---")
+    st.subheader("📋 Alert History Log")
+
+    alert_log = st.session_state.get("alert_log", [])
+
+    if not alert_log:
+        st.info("No alerts have been logged yet. Alerts will appear here automatically when vitals are out of range.")
+    else:
+        h_col1, h_col2, h_col3, h_col4 = st.columns([2, 2, 2, 1])
+        with h_col1:
+            f_cat = st.selectbox("Category", ["All", "Critical", "Warning"],
+                                 key="h_filter_cat")
+        with h_col2:
+            f_ack = st.selectbox("Status", ["All", "Acknowledged", "Unacknowledged"],
+                                 key="h_filter_ack")
+        with h_col3:
+            f_pat = st.selectbox(
+                "Patient", ["All"] + sorted({e["patient_id"] for e in alert_log}),
+                key="h_filter_pat"
+            )
+        with h_col4:
+            st.markdown("<div style='height:26px'></div>", unsafe_allow_html=True)
+            if st.button("🗑 Clear Log", key="clear_alert_log"):
+                st.session_state["alert_log"] = []
+                st.rerun()
+
+        # Apply filters
+        filtered = alert_log
+        if f_cat != "All":
+            filtered = [e for e in filtered if e["category"] == f_cat]
+        if f_ack == "Acknowledged":
+            filtered = [e for e in filtered if e["acknowledged"]]
+        elif f_ack == "Unacknowledged":
+            filtered = [e for e in filtered if not e["acknowledged"]]
+        if f_pat != "All":
+            filtered = [e for e in filtered if e["patient_id"] == f_pat]
+
+        if not filtered:
+            st.info("No alerts match the selected filters.")
+        else:
+            st.caption(f"Showing {len(filtered)} of {len(alert_log)} log entries")
+            log_df = pd.DataFrame([{
+                "Time":     e["timestamp"],
+                "Patient":  e["patient_name"],
+                "Vital":    e["vital"],
+                "Value":    e["value"],
+                "Category": e["category"],
+                "Level":    e["level"],
+                "Note":     e["message"],
+                "Email":    ("✅ Sent" if e["email_sent"]
+                             else ("❌ Failed — " + e["email_error"] if e["email_error"]
+                                   else ("—" if e["category"] != "Critical" else "⏸ Cooldown"))),
+                "Status":   (f"✔ Ack by {e['ack_by']} @ {e['ack_time']}"
+                             if e["acknowledged"] else "⏳ Pending"),
+            } for e in filtered])
+
+            st.dataframe(log_df, use_container_width=True, hide_index=True)
+
+            st.download_button(
+                "⬇️ Export Log as CSV",
+                log_df.to_csv(index=False),
+                file_name=f"healnet_alerts_{patient_id}.csv",
+                mime="text/csv",
+                key="dl_alert_log",
+            )
 
 # -----------------------------
 # 📊 STATUS CARDS
