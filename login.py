@@ -146,7 +146,7 @@ def alert(m,t="error"): st.session_state.msg=m; st.session_state.msg_type=t
 def do_login(kind,user=None,org=None):
     st.session_state.session={"kind":kind,"user":user,"org":org}
     st.session_state.screen="dashboard"; st.session_state.msg=None
-    st.switch_page("app.py")
+    st.switch_page("pages/app.py")
 def show_msg():
     if st.session_state.msg:
         t=st.session_state.msg_type
