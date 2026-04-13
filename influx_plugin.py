@@ -2,77 +2,101 @@ from influxdb_client import InfluxDBClient, Point
 from influxdb_client.client.write_api import SYNCHRONOUS
 import streamlit as st
 import random
-
-# ─── InfluxDB Cloud Configuration (from Streamlit Secrets) ───
-import streamlit as st
-from influxdb_client import InfluxDBClient, Point
-from influxdb_client.client.write_api import SYNCHRONOUS
-import random
+from datetime import datetime
 
 # ─── InfluxDB Cloud Configuration ───
-url = st.secrets["INFLUX_URL"]
-token = st.secrets["INFLUX_TOKEN"]
-org = st.secrets["INFLUX_ORG"]
-bucket = st.secrets["INFLUX_BUCKET"]
+url = st.secrets.get("url", "")
+token = st.secrets.get("token", "")
+org = st.secrets.get("org", "")
+bucket = st.secrets.get("bucket", "")
 
 client = InfluxDBClient(url=url, token=token, org=org)
-
 write_api = client.write_api(write_options=SYNCHRONOUS)
 query_api = client.query_api()
 
-
 # ───────────────── WRITE VITALS ─────────────────
-def write_vitals(patient_id):
+def write_vitals(patient_id, source="Simulated"):
+    try:
+        patient_id = str(patient_id)   # ✅ ensure matching type
 
-    systolic = random.randint(100, 150)
-    diastolic = random.randint(60, 100)
-    heart_rate = random.randint(60, 120)
-    spo2 = random.randint(90, 100)
-    blood_sugar = random.randint(80, 180)
-    temperature = round(random.uniform(97, 102), 1)
-    respiratory_rate = random.randint(12, 25)
-    weight = random.randint(50, 90)
-    height = random.randint(150, 180)
+        point = (
+            Point("patient_vitals")
+            .tag("patient_id", patient_id)
+            .tag("source", source)
+            .field("systolic", random.randint(100, 150))
+            .field("diastolic", random.randint(60, 100))
+            .field("heart_rate", random.randint(60, 120))
+            .field("spo2", random.randint(90, 100))
+            .field("blood_sugar", random.randint(80, 180))
+            .field("temperature", round(random.uniform(97, 102), 1))
+            .field("respiratory_rate", random.randint(12, 25))
+            .field("weight", random.randint(50, 90))
+            .field("height", random.randint(150, 180))
+            .time(datetime.utcnow())
+        )
 
-    point = (
-        Point("patient_vitals")
-        .tag("patient_id", patient_id)
-        .field("systolic", systolic)
-        .field("diastolic", diastolic)
-        .field("heart_rate", heart_rate)
-        .field("spo2", spo2)
-        .field("blood_sugar", blood_sugar)
-        .field("temperature", temperature)
-        .field("respiratory_rate", respiratory_rate)
-        .field("weight", weight)
-        .field("height", height)
-    )
+        write_api.write(bucket=bucket, org=org, record=point)
 
-    write_api.write(bucket=bucket, org=org, record=point)
+    except Exception as e:
+        print("❌ Error writing vitals:", e)
 
 
 # ───────────────── GET VITALS ─────────────────
 def get_vitals(patient_id):
+    try:
+        patient_id = str(patient_id)   # ✅ ensure match with DB
 
-    query = f'''
-    from(bucket: "{bucket}")
-      |> range(start: -10m)
-      |> filter(fn: (r) => r["_measurement"] == "patient_vitals")
-      |> filter(fn: (r) => r["patient_id"] == "{patient_id}")
-      |> last()
-    '''
+        query = f'''
+        from(bucket: "{bucket}")
+          |> range(start: -10m)
+          |> filter(fn: (r) => r["_measurement"] == "patient_vitals")
+          |> filter(fn: (r) => r["patient_id"] == "{patient_id}")
+          |> last()
+        '''
 
-    tables = query_api.query(org=org, query=query)
+        tables = query_api.query(org=org, query=query)
 
-    vitals = {}
+        vitals = {}
+        timestamp = None
+        source = "Unknown"
 
-    for table in tables:
-        for record in table.records:
-            vitals[record.get_field()] = record.get_value()
+        for table in tables:
+            for record in table.records:
+                vitals[record.get_field()] = record.get_value()
+                timestamp = record.get_time()
 
-    return vitals
-    for table in tables:
-        for record in table.records:
-            vitals[record.get_field()] = record.get_value()
+                if "source" in record.values:
+                    source = record.values["source"]
 
-    return vitals
+        # ✅ If DB empty → fallback
+        if not vitals:
+            return fallback_vitals()
+
+        return {
+            "data": vitals,
+            "timestamp": timestamp.strftime("%Y-%m-%d %H:%M:%S") if timestamp else "N/A",
+            "source": source
+        }
+
+    except Exception as e:
+        print("❌ Error fetching vitals:", e)
+        return fallback_vitals()
+
+
+# ───────────────── FALLBACK ─────────────────
+def fallback_vitals():
+    return {
+        "data": {
+            "systolic": 120,
+            "diastolic": 80,
+            "heart_rate": 75,
+            "spo2": 98,
+            "blood_sugar": 110,
+            "temperature": 98.6,
+            "respiratory_rate": 18,
+            "weight": 70,
+            "height": 170
+        },
+        "timestamp": datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S"),
+        "source": "Simulated (Fallback)"
+    }
