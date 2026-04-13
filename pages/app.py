@@ -1379,6 +1379,8 @@ elif page == "Health Monitoring":
 
 # ✅ Safe extraction
     data = vitals.get("data", {})
+    st.write("Vitals Full:", vitals)
+    st.write("Vitals Data:", data)
 
 # 🚨 SECOND SAFETY CHECK
     if not data:
