@@ -27,6 +27,15 @@ from patient_db import (
 )
 from realtime_engine import RealTimeEngine
 from influx_plugin import write_vitals
+
+NORMAL_RANGES = {
+    "heart_rate": "60–100 bpm",
+    "spo2": "95–100%",
+    "temperature": "97–99°F",
+    "systolic": "90–120 mmHg",
+    "diastolic": "60–80 mmHg",
+    "blood_sugar": "70–140 mg/dL"
+}
 # ─────────────────────────────────────────────────────
 #  PAGE CONFIG
 # ─────────────────────────────────────────────────────
@@ -253,24 +262,27 @@ def _load_css():
         "::-webkit-scrollbar-thumb:hover{background:rgba(100,160,220,0.60);}"
 
         # ── Custom components ──
-        ".section-card"
+        ".section-card,.dashboard-card"
         "{background:rgba(255,255,255,0.52)!important;"
         "border:1px solid rgba(255,255,255,0.80);"
         "border-radius:14px;padding:14px 18px;margin-bottom:0.6rem;"
         "backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);"
         "box-shadow:0 4px 24px rgba(100,160,220,0.14),0 1px 0 rgba(255,255,255,0.9) inset;"
-        "transition:all .3s;position:relative;overflow:hidden;"
+        "transition:all .3s;position:relative;"
         "min-height:0;}"
-        ".section-card:hover"
+        ".section-card:hover,.dashboard-card:hover"
         "{background:rgba(255,255,255,0.70);"
         "box-shadow:0 8px 32px rgba(100,160,220,0.22);transform:translateY(-2px);}"
-        ".section-card h3{color:#0d1f2d!important;margin-bottom:6px!important;font-size:.95rem!important;font-weight:700!important;}"
-        ".section-card p{color:#1e3a52!important;font-size:.76rem!important;line-height:1.45;margin:0!important;font-weight:600!important;}"
+        ".section-card h3,.dashboard-card h3{color:#0d1f2d!important;margin-bottom:6px!important;font-size:.95rem!important;font-weight:700!important;}"
+        ".section-card p,.dashboard-card p{color:#1e3a52!important;font-size:.76rem!important;line-height:1.45;margin:0!important;font-weight:600!important;}"
 
         # ── Button row alignment ──
-        # All section-cards same fixed height so buttons always line up
-        ".section-card"
+        # Dashboard quick-action cards: fixed height so buttons line up
+        ".dashboard-card"
         "{height:110px!important;overflow:hidden!important;box-sizing:border-box!important;}"
+        # Profile detail cards: full auto height, no clipping
+        ".section-card"
+        "{height:auto!important;overflow:visible!important;box-sizing:border-box!important;}"
 
         # Uniform button height and spacing below cards
         "[data-testid='stHorizontalBlock'] [data-testid='stButton']"
@@ -741,24 +753,24 @@ if page == "Dashboard":
     sub_label("◈ Quick Actions")
     qa1,qa2,qa3,qa4 = st.columns(4)
     with qa1:
-        st.html("""<div class="section-card"><h3>👤 Patient Management</h3>
+        st.html("""<div class="dashboard-card"><h3>👤 Patient Management</h3>
           <p>Register, search, view full profiles, edit records, and manage the monitoring queue.</p></div>""")
         if st.button("Open Patient Management →", key="d_pm", use_container_width=True):
             st.session_state.page = "Patient Management"
             st.session_state.pm_view = "list"; st.rerun()
     with qa2:
-        st.html("""<div class="section-card"><h3>➕ Register Patient</h3>
+        st.html("""<div class="dashboard-card"><h3>➕ Register Patient</h3>
           <p>Add a new patient with full medical history and emergency contacts.</p></div>""")
         if st.button("Register New Patient →", key="d_reg", use_container_width=True):
             st.session_state.page = "Patient Management"
             st.session_state.pm_view = "add"; st.rerun()
     with qa3:
-        st.html("""<div class="section-card"><h3>❤️ Health Monitoring</h3>
+        st.html("""<div class="dashboard-card"><h3>❤️ Health Monitoring</h3>
           <p>Live vital signs tracking with automated Gmail alerts for critical readings.</p></div>""")
         if st.button("Go to Monitoring →", key="d_mon", use_container_width=True):
             st.session_state.page = "Health Monitoring"; st.rerun()
     with qa4:
-        st.html("""<div class="section-card"><h3>🔬 Report Analysis</h3>
+        st.html("""<div class="dashboard-card"><h3>🔬 Report Analysis</h3>
           <p>Upload X-rays or scans for AI-powered diagnostic predictions.</p></div>""")
         if st.button("Analyse Report →", key="d_rep", use_container_width=True):
             st.session_state.page = "Report Analysis"; st.rerun()
@@ -1379,18 +1391,104 @@ elif page == "Health Monitoring":
 
 # ✅ Safe extraction
     data = vitals.get("data", {})
-    st.write("Vitals Full:", vitals)
-    st.write("Vitals Data:", data)
+    #st.write("Vitals Full:", vitals)
+    #st.write("Vitals Data:", data)
 
 # 🚨 SECOND SAFETY CHECK
     if not data:
         st.warning("Vitals data is empty.")
         st.stop()
 
+# ✅ STEP 2: ADD HERE 👇
+    if "prev_data" not in st.session_state:
+        st.session_state.prev_data = {}
+
+    if "history" not in st.session_state:
+        st.session_state.history = []
+# ✅ STEP 3
+    def get_trend(current, prev):
+        if prev is None:
+            return None
+        if current > prev:
+            return "↑"
+        elif current < prev:
+            return "↓"
+        return "→"
+# ✅ STEP 4: Display Metrics with Trend + Range
+
+# Normal ranges
+    NORMAL_RANGES = {
+        "heart_rate": "60–100 bpm",
+        "spo2": "95–100%",
+        "temperature": "97–99°F"
+}
+
+    col1, col2, col3 = st.columns(3)
+
+# 🔹 Heart Rate
+    hr = data.get("heart_rate")
+    prev_hr = st.session_state.prev_data.get("heart_rate")
+    trend_hr = get_trend(hr, prev_hr)
+
+    col1.metric(
+    "Heart Rate",
+    f"{hr} bpm",
+    delta=trend_hr,
+    help=f"Normal: {NORMAL_RANGES['heart_rate']}"
+)
+
+# 🔹 SpO2
+    spo2 = data.get("spo2")
+    prev_spo2 = st.session_state.prev_data.get("spo2")
+    trend_spo2 = get_trend(spo2, prev_spo2)
+
+    col2.metric(
+    "SpO2",
+    f"{spo2}%",
+    delta=trend_spo2,
+    help=f"Normal: {NORMAL_RANGES['spo2']}"
+)
+
+# 🔹 Temperature
+    temp = data.get("temperature")
+    prev_temp = st.session_state.prev_data.get("temperature")
+    trend_temp = get_trend(temp, prev_temp)
+
+    col3.metric(
+    "Temperature",
+    f"{temp} °F",
+    delta=trend_temp,
+    help=f"Normal: {NORMAL_RANGES['temperature']}"
+)
+
+# ✅ STEP 5: Store history for charts
+
+    st.session_state.history.append({
+    "heart_rate": data.get("heart_rate"),
+    "spo2": data.get("spo2"),
+    "temperature": data.get("temperature")
+})
+
+# Keep only last 20 records
+    st.session_state.history = st.session_state.history[-20:]
 # ✅ Show timestamp & source
     st.caption(f"🕒 Last Updated: {vitals.get('timestamp', 'N/A')}")
     st.caption(f"📡 Source: {vitals.get('source', 'Unknown')}")
 
+# ✅ STEP 6: Display Line Chart
+
+    import pandas as pd
+
+# Convert history to DataFrame
+    df = pd.DataFrame(st.session_state.history)
+
+    st.subheader("📈 Vitals Trend")
+
+# Show line chart
+    st.line_chart(df)
+
+    # ✅ STEP 7: Update previous data (VERY IMPORTANT)
+    st.session_state.prev_data = data
 # -----------------------------
 # ✅ EXTRACT VALUES (FIXED)
 # -----------------------------
