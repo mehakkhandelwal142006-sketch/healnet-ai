@@ -1384,6 +1384,10 @@ elif page == "Health Monitoring":
     engine = RealTimeEngine(mode="simulated")
     vitals = engine.fetch(patient_id)
     # ✅ AUTO REFRESH (MOVE HERE 👇)
+    from streamlit_autorefresh import st_autorefresh
+
+    if auto_refresh:
+        st_autorefresh(interval=refresh_seconds * 1000, key="refresh")
     
 # 🚨 SAFETY CHECK (VERY IMPORTANT FOR CLOUD)
     if not vitals:
@@ -1756,12 +1760,7 @@ elif page == "Health Monitoring":
     else:
         st.success("✅ NORMAL — All vitals within healthy range.")
 
-# -----------------------------
-# 🔄 AUTO REFRESH
-# -----------------------------
-    if auto_refresh:
-        time.sleep(refresh_seconds)
-        st.rerun()
+
 # ─────────────────────────────────────────────────────
 #  REPORT ANALYSIS
 # ─────────────────────────────────────────────────────
