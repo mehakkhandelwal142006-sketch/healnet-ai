@@ -1378,11 +1378,13 @@ elif page == "Health Monitoring":
     import time
 
 # ✅ Write fresh data to InfluxDB
-    write_vitals(patient_id)
+    import time
+    write_vitals(patient_id, source=str(time.time()))
 
 # ✅ Fetch data
     engine = RealTimeEngine(mode="simulated")
     vitals = engine.fetch(patient_id)
+    st.write("DEBUG Timestamp:", vitals.get("timestamp"))
     # ✅ AUTO REFRESH (MOVE HERE 👇)
     from streamlit_autorefresh import st_autorefresh
 
