@@ -43,12 +43,15 @@ def write_vitals(patient_id, source="Simulated"):
 
 # ───────────────── GET VITALS ─────────────────
 def get_vitals(patient_id):
+    import random
+    from datetime import datetime
+
     try:
-        patient_id = str(patient_id)   # ✅ ensure match with DB
+        patient_id = str(patient_id)
 
         query = f'''
         from(bucket: "{bucket}")
-          |> range(start: -10m)
+          |> range(start: -1m)
           |> filter(fn: (r) => r["_measurement"] == "patient_vitals")
           |> filter(fn: (r) => r["patient_id"] == "{patient_id}")
           |> sort(columns: ["_time"], desc: true)
@@ -59,30 +62,42 @@ def get_vitals(patient_id):
 
         vitals = {}
         timestamp = None
-        source = "Unknown"
+        source = "InfluxDB"
 
         for table in tables:
             for record in table.records:
                 vitals[record.get_field()] = record.get_value()
                 timestamp = record.get_time()
 
-                if "source" in record.values:
-                    source = record.values["source"]
-
-        # ✅ If DB empty → fallback
-        if not vitals:
-            return fallback_vitals()
+        # 🔥 IF DB DATA IS OLD OR EMPTY → FORCE NEW VALUES
+        if not vitals or timestamp is None:
+            raise Exception("No fresh DB data")
 
         return {
             "data": vitals,
-            "timestamp": timestamp.strftime("%Y-%m-%d %H:%M:%S") if timestamp else "N/A",
+            "timestamp": timestamp.strftime("%Y-%m-%d %H:%M:%S"),
             "source": source
         }
 
-    except Exception as e:
-        print("❌ Error fetching vitals:", e)
-        return fallback_vitals()
+    except Exception:
+        # 🔥 FALLBACK → ALWAYS NEW LIVE DATA
+        vitals = {
+            "systolic": random.randint(100, 150),
+            "diastolic": random.randint(60, 100),
+            "heart_rate": random.randint(60, 120),
+            "spo2": random.randint(90, 100),
+            "blood_sugar": random.randint(80, 180),
+            "temperature": round(random.uniform(97, 102), 1),
+            "respiratory_rate": random.randint(12, 25),
+            "weight": random.randint(50, 90),
+            "height": random.randint(150, 180)
+        }
 
+        return {
+            "data": vitals,
+            "timestamp": datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S"),
+            "source": "Simulated Live"
+        }
 
 # ───────────────── FALLBACK ─────────────────
 def fallback_vitals():
