@@ -51,7 +51,8 @@ def get_vitals(patient_id):
           |> range(start: -10m)
           |> filter(fn: (r) => r["_measurement"] == "patient_vitals")
           |> filter(fn: (r) => r["patient_id"] == "{patient_id}")
-          |> last()
+          |> sort(columns: ["_time"], desc: true)
+          |> limit(n: 1)
         '''
 
         tables = query_api.query(org=org, query=query)
