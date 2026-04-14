@@ -1383,7 +1383,8 @@ elif page == "Health Monitoring":
 # ✅ Fetch data
     engine = RealTimeEngine(mode="simulated")
     vitals = engine.fetch(patient_id)
-
+    # ✅ AUTO REFRESH (MOVE HERE 👇)
+    
 # 🚨 SAFETY CHECK (VERY IMPORTANT FOR CLOUD)
     if not vitals:
         st.warning("No vitals data received from device.")
