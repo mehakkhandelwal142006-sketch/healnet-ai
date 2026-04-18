@@ -27,15 +27,7 @@ from patient_db import (
 )
 from realtime_engine import RealTimeEngine
 from influx_plugin import write_vitals
-
-NORMAL_RANGES = {
-    "heart_rate": "60–100 bpm",
-    "spo2": "95–100%",
-    "temperature": "97–99°F",
-    "systolic": "90–120 mmHg",
-    "diastolic": "60–80 mmHg",
-    "blood_sugar": "70–140 mg/dL"
-}
+from pages.healnet_ai import HealNetAI
 # ─────────────────────────────────────────────────────
 #  PAGE CONFIG
 # ─────────────────────────────────────────────────────
@@ -393,7 +385,181 @@ def _load_css():
         ".section-card{padding:14px 16px;}.cta-card{padding:22px 14px;}"
         ".vital-value{font-size:1.5rem;}}"
     )
-    st.markdown(f"<style>{THEME}{external_css}</style>", unsafe_allow_html=True)
+    DARK_TEXT = """
+ 
+    /* ===== GLOBAL: every text element dark ===== */
+    .stApp * { color: #0a2540; }
+ 
+    /* Main content text */
+    [data-testid="stMain"] p,
+    [data-testid="stMain"] span,
+    [data-testid="stMain"] div,
+    [data-testid="stMain"] label,
+    [data-testid="stMain"] li,
+    [data-testid="stMain"] td,
+    [data-testid="stMain"] th { color: #0a2540 !important; }
+ 
+    h1,h2,h3,h4,h5,h6,
+    h1 *,h2 *,h3 *,h4 *,h5 *,h6 * { color: #0a2540 !important; }
+ 
+    p, .stMarkdown p, [data-testid="stMarkdownContainer"] p,
+    [data-testid="stMarkdownContainer"] li,
+    [data-testid="stMarkdownContainer"] span { color: #1a3a5c !important; }
+ 
+    /* ===== ALL INPUT BOXES: white background ===== */
+    [data-testid="stTextInput"] input,
+    [data-testid="stTextInput"] input:focus {
+        background: #ffffff !important; color: #0a2540 !important;
+        border: 1.5px solid #b0cce8 !important; border-radius: 10px !important; }
+ 
+    [data-testid="stNumberInput"] input,
+    [data-testid="stNumberInput"] input:focus {
+        background: #ffffff !important; color: #0a2540 !important;
+        border: 1.5px solid #b0cce8 !important; border-radius: 10px !important; }
+ 
+    [data-testid="stNumberInput"] button {
+        background: #eaf3ff !important; color: #0a2540 !important;
+        border-color: #b0cce8 !important; }
+ 
+    [data-testid="stTextAreaInput"] textarea {
+        background: #ffffff !important; color: #0a2540 !important;
+        border: 1.5px solid #b0cce8 !important; border-radius: 10px !important; }
+ 
+    /* Date input */
+    [data-testid="stDateInput"] input,
+    [data-testid="stDateInput"] div[data-baseweb="input"],
+    [data-testid="stDateInput"] input:focus {
+        background: #ffffff !important; color: #0a2540 !important;
+        border: 1.5px solid #b0cce8 !important; border-radius: 10px !important; }
+ 
+    [data-baseweb="calendar"], [data-baseweb="calendar"] * {
+        background: #ffffff !important; color: #0a2540 !important; }
+    [data-baseweb="calendar"] button {
+        background: #eaf3ff !important; color: #0a2540 !important; }
+    [data-baseweb="calendar"] [aria-selected="true"] {
+        background: #3399ff !important; color: #ffffff !important; }
+ 
+    /* Selectbox */
+    [data-testid="stSelectbox"] > div > div,
+    [data-testid="stSelectbox"] [data-baseweb="select"] > div {
+        background: #ffffff !important; color: #0a2540 !important;
+        border: 1.5px solid #b0cce8 !important; border-radius: 10px !important; }
+    [data-testid="stSelectbox"] span,
+    [data-testid="stSelectbox"] p,
+    [data-testid="stSelectbox"] div { color: #0a2540 !important; }
+    div[data-baseweb="popover"], div[data-baseweb="popover"] *,
+    ul[role="listbox"], ul[role="listbox"] * {
+        background: #ffffff !important; color: #0a2540 !important; }
+    li[role="option"]:hover, div[role="option"]:hover {
+        background: #ddeeff !important; }
+ 
+    /* Multiselect */
+    [data-testid="stMultiSelect"] > div,
+    [data-testid="stMultiSelect"] [data-baseweb="select"] > div {
+        background: #ffffff !important; color: #0a2540 !important;
+        border: 1.5px solid #b0cce8 !important; border-radius: 10px !important; }
+    [data-testid="stMultiSelect"] span { color: #0a2540 !important; }
+    [data-testid="stMultiSelect"] [data-baseweb="tag"] {
+        background: #d0e8ff !important; color: #0a2540 !important; }
+ 
+    /* ===== SLIDERS ===== */
+    [data-testid="stSlider"] label,
+    [data-testid="stSlider"] p,
+    [data-testid="stSlider"] span,
+    [data-testid="stSlider"] div[data-testid="stTickBarMin"],
+    [data-testid="stSlider"] div[data-testid="stTickBarMax"],
+    [data-testid="stSlider"] [data-testid="stSliderThumbValue"] {
+        color: #0a2540 !important; }
+    [data-testid="stSlider"] [data-baseweb="slider"] div[role="slider"] {
+        background: #ffffff !important; border: 2px solid #3399ff !important; }
+ 
+    /* ===== RADIO (main content, not sidebar) ===== */
+    [data-testid="stMain"] [data-testid="stRadio"] label p,
+    [data-testid="stMain"] [data-testid="stRadio"] label span,
+    [data-testid="stMain"] [data-testid="stRadio"] label { color: #0a2540 !important; }
+ 
+    /* ===== CHECKBOXES ===== */
+    [data-testid="stCheckbox"] label span,
+    [data-testid="stCheckbox"] label p { color: #0a2540 !important; }
+    [data-testid="stCheckbox"] [data-baseweb="checkbox"] {
+        background: #ffffff !important; border-color: #b0cce8 !important; }
+ 
+    /* ===== TOGGLE (main content only) ===== */
+    [data-testid="stMain"] [data-testid="stToggle"] label p { color: #0a2540 !important; }
+ 
+    /* ===== ALL LABELS ===== */
+    label { color: #2d5a8e !important; font-weight: 700 !important; }
+ 
+    /* ===== TABS ===== */
+    [data-testid="stTabs"] button[role="tab"] {
+        color: #2d5a8e !important; background: rgba(255,255,255,0.50) !important; }
+    [data-testid="stTabs"] button[role="tab"][aria-selected="true"] {
+        color: #0055bb !important; border-bottom-color: #3399ff !important;
+        background: rgba(255,255,255,0.80) !important; }
+    [data-testid="stTabs"] button[role="tab"] p { color: inherit !important; }
+ 
+    /* ===== FILE UPLOADER ===== */
+    [data-testid="stFileUploader"] {
+        background: #ffffff !important; border: 1.5px dashed #b0cce8 !important;
+        border-radius: 12px !important; }
+    [data-testid="stFileUploader"] span,
+    [data-testid="stFileUploader"] p,
+    [data-testid="stFileUploader"] small { color: #2d5a8e !important; }
+ 
+    /* ===== METRIC CARDS ===== */
+    [data-testid="stMetricLabel"] p,
+    [data-testid="stMetricLabel"] div { color: #2d5a8e !important; }
+    [data-testid="stMetricValue"] div { color: #0a2540 !important; }
+    [data-testid="stMetricDelta"] div { color: #1a7a4a !important; }
+ 
+    /* ===== EXPANDER ===== */
+    [data-testid="stExpander"] summary p,
+    [data-testid="stExpander"] summary span,
+    [data-testid="stExpander"] summary { color: #0a2540 !important; }
+    [data-testid="stExpander"] [data-testid="stExpanderDetails"] p,
+    [data-testid="stExpander"] [data-testid="stExpanderDetails"] span,
+    [data-testid="stExpander"] [data-testid="stExpanderDetails"] label { color: #0a2540 !important; }
+ 
+    /* ===== ALERTS ===== */
+    [data-testid="stSuccess"] p, [data-testid="stSuccess"] span { color: #005a30 !important; }
+    [data-testid="stWarning"] p, [data-testid="stWarning"] span { color: #7a4500 !important; }
+    [data-testid="stError"]   p, [data-testid="stError"]   span { color: #7a0018 !important; }
+    [data-testid="stInfo"]    p, [data-testid="stInfo"]    span { color: #003070 !important; }
+ 
+    /* ===== PLACEHOLDER TEXT ===== */
+    ::placeholder { color: #8aaac8 !important; opacity: 1 !important; }
+ 
+    /* ===== CAPTION / HELP TEXT ===== */
+    [data-testid="stCaptionContainer"] p, small, .stCaption { color: #4a7090 !important; }
+ 
+    /* ===== CODE BLOCKS ===== */
+    code, pre, [data-testid="stCode"] {
+        background: #f0f6ff !important; color: #0a2540 !important;
+        border: 1px solid #c8dff0 !important; }
+ 
+    /* ===== SIDEBAR: keep WHITE text on blue ===== */
+    [data-testid="stSidebar"],
+    [data-testid="stSidebar"] *,
+    [data-testid="stSidebar"] p,
+    [data-testid="stSidebar"] span,
+    [data-testid="stSidebar"] label,
+    [data-testid="stSidebar"] div { color: #ffffff !important; }
+    [data-testid="stSidebar"] input {
+        background: rgba(255,255,255,0.15) !important;
+        color: #ffffff !important; border-color: rgba(255,255,255,0.30) !important; }
+    [data-testid="stSidebar"] input::placeholder { color: rgba(255,255,255,0.50) !important; }
+ 
+    /* ===== WEBKIT TEXT FILL (stops grey-out on autofill) ===== */
+    input, textarea, select,
+    [data-baseweb="input"] input,
+    [data-baseweb="textarea"] textarea {
+        -webkit-text-fill-color: #0a2540 !important; }
+    [data-testid="stSidebar"] input {
+        -webkit-text-fill-color: #ffffff !important; }
+ 
+    """
+ 
+    st.markdown(f"<style>{THEME}{DARK_TEXT}{external_css}</style>", unsafe_allow_html=True)
 
 _load_css()
 
@@ -1339,6 +1505,53 @@ elif page == "Health Monitoring":
     refresh_seconds = int(refresh_rate.replace("s",""))
     st.markdown("---")
 
+    st.markdown("""
+    <style>
+
+    /* ===== FORCE DARK TEXT FOR CONTROL PANEL ===== */
+
+    /* Toggle text */
+    [data-testid="stToggle"] label,
+    [data-testid="stToggle"] span,
+    [data-testid="stToggle"] p {
+    color: black !important;
+}
+
+/* Selectbox main box */
+    [data-testid="stSelectbox"] div[data-baseweb="select"] {
+    background-color: white !important;
+    color: black !important;
+}
+
+/* Selected value text */
+    [data-testid="stSelectbox"] span {
+    color: black !important;
+}
+
+/* Dropdown options */
+    div[role="listbox"] * {
+    color: black !important;
+    background-color: white !important;
+}
+
+/* Fix hidden label (Interval) */
+    [data-testid="stSelectbox"] label {
+    color: black !important;
+}
+
+/* Buttons text (optional clarity) */
+    .stButton button {
+    color: white !important;
+}
+
+/* Prevent faded opacity issue */
+    [data-testid="stSelectbox"],
+    [data-testid="stToggle"] {
+    opacity: 1 !important;
+}
+
+    </style>
+""", unsafe_allow_html=True)
     if not st.session_state.monitoring_active:
         st.html(f"""<div class="cta-card">
           <div class="cta-card-title">Ready to Monitor</div>
@@ -1346,159 +1559,30 @@ elif page == "Health Monitoring":
           (ID: {patient_id}) is selected.<br>Press <strong>▶ Start Monitoring</strong> to begin live vital tracking.</div>
         </div>""")
         st.stop()
-    # ✅ Get patient_id safely
+
+    # ── Live monitoring ───────────────────────────────────────────────
     from realtime_engine import RealTimeEngine
     from influx_plugin import write_vitals
-
-# ✅ Load patients
-    patients = get_all_patients()
-
-# -----------------------------
-# 🧑‍⚕️ PATIENT SELECTION
-# -----------------------------
-    selected_patient = st.selectbox("Select Patient", patients)
-
-# ✅ store directly (STRING)
-    st.session_state["patient_id"] = selected_patient
-
-    patient_id = st.session_state.get("patient_id")
-
-    if not patient_id:
-       st.warning("Please select a patient first.")
-       st.stop()
-
-# ✅ FIX HERE
-    patient_name = patient_id
-
-# -----------------------------
-# -----------------------------
-# 📊 MONITORING
-# -----------------------------
-
     import time
 
-# ✅ Write fresh data to InfluxDB
-    import time
-    write_vitals(patient_id, source=str(time.time()))
-
-# ✅ Fetch data
+    # Write fresh simulated data then fetch
+    write_vitals(patient_id)
     engine = RealTimeEngine(mode="simulated")
     vitals = engine.fetch(patient_id)
-    st.write("DEBUG Timestamp:", vitals.get("timestamp"))
-    # ✅ AUTO REFRESH (MOVE HERE 👇)
-    from streamlit_autorefresh import st_autorefresh
 
-    if auto_refresh:
-        st_autorefresh(interval=refresh_seconds * 1000, key="refresh")
-    
-# 🚨 SAFETY CHECK (VERY IMPORTANT FOR CLOUD)
     if not vitals:
-        st.warning("No vitals data received from device.")
+        st.warning("⚠️ No vitals data received from device.")
         st.stop()
 
-# ✅ Safe extraction
     data = vitals.get("data", {})
-    #st.write("Vitals Full:", vitals)
-    #st.write("Vitals Data:", data)
 
-# 🚨 SECOND SAFETY CHECK
     if not data:
-        st.warning("Vitals data is empty.")
+        st.warning("⚠️ Vitals data is empty.")
         st.stop()
 
-# ✅ STEP 2: ADD HERE 👇
-    if "prev_data" not in st.session_state:
-        st.session_state.prev_data = {}
+    st.caption(f"🕒 Last Updated: {vitals.get('timestamp', 'N/A')} &nbsp;·&nbsp; 📡 Source: {vitals.get('source', 'Unknown')}")
 
-    if "history" not in st.session_state:
-        st.session_state.history = []
-# ✅ STEP 3
-    def get_trend(current, prev):
-        if prev is None:
-            return None
-        if current > prev:
-            return "↑"
-        elif current < prev:
-            return "↓"
-        return "→"
-# ✅ STEP 4: Display Metrics with Trend + Range
-
-# Normal ranges
-    NORMAL_RANGES = {
-        "heart_rate": "60–100 bpm",
-        "spo2": "95–100%",
-        "temperature": "97–99°F"
-}
-
-    col1, col2, col3 = st.columns(3)
-
-# 🔹 Heart Rate
-    hr = data.get("heart_rate")
-    prev_hr = st.session_state.prev_data.get("heart_rate")
-    trend_hr = get_trend(hr, prev_hr)
-
-    col1.metric(
-    "Heart Rate",
-    f"{hr} bpm",
-    delta=trend_hr,
-    help=f"Normal: {NORMAL_RANGES['heart_rate']}"
-)
-
-# 🔹 SpO2
-    spo2 = data.get("spo2")
-    prev_spo2 = st.session_state.prev_data.get("spo2")
-    trend_spo2 = get_trend(spo2, prev_spo2)
-
-    col2.metric(
-    "SpO2",
-    f"{spo2}%",
-    delta=trend_spo2,
-    help=f"Normal: {NORMAL_RANGES['spo2']}"
-)
-
-# 🔹 Temperature
-    temp = data.get("temperature")
-    prev_temp = st.session_state.prev_data.get("temperature")
-    trend_temp = get_trend(temp, prev_temp)
-
-    col3.metric(
-    "Temperature",
-    f"{temp} °F",
-    delta=trend_temp,
-    help=f"Normal: {NORMAL_RANGES['temperature']}"
-)
-
-# ✅ STEP 5: Store history for charts
-
-    st.session_state.history.append({
-    "heart_rate": data.get("heart_rate"),
-    "spo2": data.get("spo2"),
-    "temperature": data.get("temperature")
-})
-
-# Keep only last 20 records
-    st.session_state.history = st.session_state.history[-20:]
-# ✅ Show timestamp & source
-    st.caption(f"🕒 Last Updated: {vitals.get('timestamp', 'N/A')}")
-    st.caption(f"📡 Source: {vitals.get('source', 'Unknown')}")
-
-# ✅ STEP 6: Display Line Chart
-
-    import pandas as pd
-
-# Convert history to DataFrame
-    df = pd.DataFrame(st.session_state.history)
-
-    st.subheader("📈 Vitals Trend")
-
-# Show line chart
-    st.line_chart(df)
-
-    # ✅ STEP 7: Update previous data (VERY IMPORTANT)
-    st.session_state.prev_data = data
-# -----------------------------
-# ✅ EXTRACT VALUES (FIXED)
-# -----------------------------
+    # ── Extract values ────────────────────────────────────────────────
     systolic  = data.get("systolic", 0)
     diastolic = data.get("diastolic", 0)
     heart     = data.get("heart_rate", 0)
@@ -1508,33 +1592,24 @@ elif page == "Health Monitoring":
     resp      = data.get("respiratory_rate", 0)
     weight    = data.get("weight", 0)
     height    = data.get("height", 0)
+    bmi       = round(weight / ((height / 100) ** 2), 1) if height > 0 else 0
 
-    bmi = round(weight / ((height / 100) ** 2), 1) if height > 0 else 0
-
-# -----------------------------
-# 📊 UI
-# -----------------------------
+    # ── Live metrics ─────────────────────────────────────────────────
     st.subheader("📊 Live Readings")
-
-# Row 1
     col1, col2, col3, col4 = st.columns(4)
-    col1.metric("Systolic", systolic, "mmHg")
-    col2.metric("Diastolic", diastolic, "mmHg")
-    col3.metric("Heart Rate", heart, "bpm")
-    col4.metric("SpO₂", spo2, "%")
+    col1.metric("Systolic",   systolic,  "mmHg")
+    col2.metric("Diastolic",  diastolic, "mmHg")
+    col3.metric("Heart Rate", heart,     "bpm")
+    col4.metric("SpO₂",       spo2,      "%")
 
-# Row 2
     col5, col6, col7, col8 = st.columns(4)
-    col5.metric("Blood Sugar", sugar, "mg/dL")
-    col6.metric("Temp", temp, "°F")
-    col7.metric("Resp. Rate", resp, "br/min")
-    col8.metric("BMI", bmi)
-
+    col5.metric("Blood Sugar",  sugar, "mg/dL")
+    col6.metric("Temp",         temp,  "°F")
+    col7.metric("Resp. Rate",   resp,  "br/min")
+    col8.metric("BMI",          bmi)
     st.markdown("---")
 
-# -----------------------------
-# 🧠 CLASSIFICATION
-# -----------------------------
+    # ── Classification ────────────────────────────────────────────────
     bp_level,   bp_msg   = classify_bp(systolic, diastolic)
     hr_level,   hr_msg   = classify_heart_rate(heart)
     spo2_level, spo2_msg = classify_spo2(spo2)
@@ -1545,19 +1620,26 @@ elif page == "Health Monitoring":
 
     vitals_map = {
         "Blood Pressure":   (f"{systolic}/{diastolic} mmHg", bp_level,   bp_msg),
-    "Heart Rate":       (f"{heart} bpm",                  hr_level,   hr_msg),
-    "SpO₂":             (f"{spo2}%",                      spo2_level, spo2_msg),
-    "Temperature":      (f"{temp}°F",                     tmp_level,  tmp_msg),
-    "Blood Sugar":      (f"{sugar} mg/dL",                sg_level,   sg_msg),
-    "Respiratory Rate": (f"{resp} breaths/min",           rr_level,   rr_msg),
-    "BMI":              (f"{bmi}",                        bmi_level,  bmi_msg),
-}
+        "Heart Rate":       (f"{heart} bpm",                 hr_level,   hr_msg),
+        "SpO₂":             (f"{spo2}%",                     spo2_level, spo2_msg),
+        "Temperature":      (f"{temp}°F",                    tmp_level,  tmp_msg),
+        "Blood Sugar":      (f"{sugar} mg/dL",               sg_level,   sg_msg),
+        "Respiratory Rate": (f"{resp} breaths/min",          rr_level,   rr_msg),
+        "BMI":              (f"{bmi}",                       bmi_level,  bmi_msg),
+    }
 
-# ─────────────────────────────────────────────────────
-# 🚨  ALERT SYSTEM (Upgraded)
-# ─────────────────────────────────────────────────────
-    patient_name = patient_id   # use patient_id as display name
+    # ── 🤖 AI Predictive Insights ─────────────────────────────────────
+    from pages.healnet_ai import HealNetAI
 
+    ai = HealNetAI(
+        patient_id,
+        vitals_map,
+        st.session_state.get("alert_log", [])
+        )
+
+    ai.render()
+
+    # ── Alert system ──────────────────────────────────────────────────
     recip = st.session_state.get("alert_email", "")
     critical_alerts, warning_alerts = check_and_alert(
         patient_name, patient_id, vitals_map, recip
@@ -1714,9 +1796,7 @@ elif page == "Health Monitoring":
                 key="dl_alert_log",
             )
 
-# -----------------------------
-# 📊 STATUS CARDS
-# -----------------------------
+    # ── Vital status cards ────────────────────────────────────────────
     st.subheader("◈ Vital Sign Status")
 
     def vital_card(label, value, unit, level, message):
@@ -1741,9 +1821,7 @@ elif page == "Health Monitoring":
         vital_card("Respiratory Rate", f"{resp}", "breaths/min", rr_level, rr_msg)
         vital_card("BMI", f"{bmi}", "", bmi_level, bmi_msg)
 
-# -----------------------------
-# 🧾 OVERALL STATUS
-# -----------------------------
+    # ── Overall health status ─────────────────────────────────────────
     st.subheader("◈ Overall Health Status")
 
     all_levels     = [bp_level, hr_level, spo2_level, sg_level, tmp_level, rr_level, bmi_level]
@@ -1762,7 +1840,10 @@ elif page == "Health Monitoring":
     else:
         st.success("✅ NORMAL — All vitals within healthy range.")
 
-
+    # ── Auto-refresh ──────────────────────────────────────────────────
+    if auto_refresh:
+        time.sleep(refresh_seconds)
+        st.rerun()
 # ─────────────────────────────────────────────────────
 #  REPORT ANALYSIS
 # ─────────────────────────────────────────────────────
@@ -1792,3 +1873,80 @@ elif page == "Report Analysis":
 - Cardiac silhouette within normal limits
 
 **Recommendation:** Routine follow-up as advised by physician.""")
+                
+
+
+st.markdown("""
+<style>
+
+/* ================= FINAL GLOBAL FIX ================= */
+
+/* Reset weird opacity/text-fill issues */
+* {
+    -webkit-text-fill-color: unset !important;
+}
+
+/* ===== INPUTS ===== */
+input, textarea {
+    color: black !important;
+    background: white !important;
+    -webkit-text-fill-color: black !important;
+}
+
+/* ===== TOGGLE (Auto Refresh) ===== */
+[data-testid="stToggle"] *,
+[data-testid="stToggle"] label,
+[data-testid="stToggle"] span,
+[data-testid="stToggle"] p {
+    color: black !important;
+    opacity: 1 !important;
+}
+
+/* ===== SELECTBOX (ALL) ===== */
+[data-testid="stSelectbox"] div[data-baseweb="select"] {
+    background: white !important;
+    color: black !important;
+    opacity: 1 !important;
+}
+
+[data-testid="stSelectbox"] span {
+    color: black !important;
+}
+
+/* Dropdown menu */
+div[role="listbox"],
+div[data-baseweb="popover"] {
+    background: white !important;
+}
+
+/* Dropdown options */
+div[role="option"],
+div[role="option"] * {
+    color: black !important;
+    background: white !important;
+}
+
+/* ===== ALERT LOG FILTERS ===== */
+.stSelectbox, .stSelectbox * {
+    color: black !important;
+}
+
+/* ===== LABELS ===== */
+label {
+    color: black !important;
+    opacity: 1 !important;
+}
+
+/* ===== FIX FADED STREAMLIT TEXT ===== */
+[data-baseweb="select"],
+[data-baseweb="select"] span {
+    opacity: 1 !important;
+}
+
+/* ===== BUTTON TEXT ===== */
+button {
+    -webkit-text-fill-color: unset !important;
+}
+
+</style>
+""", unsafe_allow_html=True)
