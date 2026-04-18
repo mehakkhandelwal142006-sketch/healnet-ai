@@ -10,9 +10,13 @@ SMTP Setup (choose ONE method):
 
 import streamlit as st
 import sqlite3, hashlib, random, string, smtplib, os
+from datetime import date
 
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+
+if "session" not in st.session_state:
+    st.session_state.session = None
 
 # ── Load .env file if it exists ────────────────────────────────
 try:
@@ -473,15 +477,29 @@ def screen_solo():
         rn=st.text_input("Full Name *",placeholder="Full Name",key="solo_r_name")
         re=st.text_input("Email Address *",placeholder="you@example.com",key="solo_r_email")
         c1,c2=st.columns(2)
-        with c1: rg=st.selectbox("Gender",["Female","Male","Other"],key="solo_r_gender")
-        with c2: rd=st.text_input("Date of Birth",placeholder="DD/MM/YYYY",key="solo_r_dob")
+        with c1: 
+            rg=st.selectbox("Gender",["Female","Male","Other"],key="solo_r_gender")
+        with c2: 
+            rd = st.date_input(
+                "Date of Birth",
+                min_value=date(1900, 1, 1),
+                max_value=date.today(),
+                key="solo_r_dob"
+    )
         c3,c4=st.columns(2)
-        with c3: rb=st.text_input("Blood Group",placeholder="e.g. O+",key="solo_r_blood")
-        with c4: rph=st.text_input("Phone",placeholder="+91",key="solo_r_phone")
+        with c3: 
+            rb=st.text_input("Blood Group",placeholder="e.g. O+",key="solo_r_blood")
+        with c4:
+            rph=st.text_input("Phone",placeholder="+91",key="solo_r_phone")
         divider("Set login credentials")
         ru=st.text_input("Username *",placeholder="choose a username",key="solo_r_u")
         rp=st.text_input("Password *",type="password",placeholder="min. 6 characters",key="solo_r_p")
-        rp2=st.text_input("Confirm Password *",type="password",placeholder="repeat password",key="solo_r_p2")
+        rp2 = st.text_input(
+            "Confirm Password *",
+            type="password",
+            placeholder="Confirm your password",
+            key="solo_r_p2"
+)
         st.markdown("<br>",unsafe_allow_html=True)
         if st.button("Create My Account",key="solo_r_btn",type="primary"):
             if not rn:              alert("⚠️ Full Name is required."); st.rerun()
@@ -496,7 +514,10 @@ def screen_solo():
                 con=db(); count=con.execute("SELECT COUNT(*) FROM solo_users").fetchone()[0]
                 hid="HN-"+str(count+1).zfill(5)
                 try:
-                    con.execute("INSERT INTO solo_users(name,email,username,password,gender,dob,blood,contact,healnet_id) VALUES(?,?,?,?,?,?,?,?,?)",(rn,re,ru,hp(rp),rg,rd,rb,rph,hid)); con.commit()
+                    con.execute(
+    "INSERT INTO solo_users(name,email,username,password,gender,dob,blood,contact,healnet_id) VALUES(?,?,?,?,?,?,?,?,?)",
+    (rn, re, ru, hp(rp), rg, str(rd), rb, rph, hid)
+)
                     alert(f"✅ Account created! HealNet ID: {hid}. Please Sign In now.","success")
                 except sqlite3.IntegrityError as e:
                     if "email" in str(e).lower(): alert("⚠️ This email is already registered.")
@@ -515,9 +536,25 @@ def screen_solo():
 # ════════════ DASHBOARD ════════════
 def screen_dashboard():
     logo(); card_open()
-    sess=st.session_state.session; kind=sess["kind"]
-    user=sess.get("user") or {}; org=sess.get("org") or {}
-    COLORS={"org":("#0d9488","#f0fdfa","#ccfbf1"),"staff":("#3b82f6","#eff6ff","#bfdbfe"),"orgpatient":("#8b5cf6","#f5f3ff","#ddd6fe"),"solo":("#f59e0b","#fffbeb","#fde68a")}
+
+    sess = st.session_state.get("session")
+
+    if sess is None:
+        st.warning("Please login first.")
+        st.session_state.screen = "entry"
+        st.rerun()
+
+    kind = sess.get("kind")
+
+    user = sess.get("user") or {}
+    org = sess.get("org") or {}
+
+    COLORS = {
+        "org":("#0d9488","#f0fdfa","#ccfbf1"),
+        "staff":("#3b82f6","#eff6ff","#bfdbfe"),
+        "orgpatient":("#8b5cf6","#f5f3ff","#ddd6fe"),
+        "solo":("#f59e0b","#fffbeb","#fde68a")
+    }
     color,bg,border=COLORS[kind]
     display_name=org.get("name","") if kind=="org" else user.get("name","")
     id_line={"org":f"Admin  ·  {org.get('org_code','')}","staff":f"{user.get('role','')}  ·  {user.get('staff_id','')}","orgpatient":f"Patient  ·  {user.get('patient_id','')}","solo":f"Personal  ·  {user.get('healnet_id','')}"}[kind]
@@ -1183,7 +1220,7 @@ def screen_solo():
         re  = st.text_input("Email Address *", placeholder="you@example.com", key="solo_r_email")
         c1, c2 = st.columns(2)
         with c1: rg  = st.selectbox("Gender", ["Female","Male","Other"], key="solo_r_gender")
-        with c2: rd  = st.text_input("Date of Birth", placeholder="DD/MM/YYYY", key="solo_r_dob")
+        with c2: rd  = st.date_input("Date of Birth", placeholder="DD/MM/YYYY", key="solo_r_dob")
         c3, c4 = st.columns(2)
         with c3: rb  = st.text_input("Blood Group", placeholder="e.g. O+", key="solo_r_blood")
         with c4: rph = st.text_input("Phone", placeholder="+91 98765 43210", key="solo_r_phone")
@@ -1629,7 +1666,7 @@ def screen_signup():
         re  = st.text_input("Email Address *", placeholder="you@example.com", key="sup_sl_email")
         c1, c2 = st.columns(2)
         with c1: rg  = st.selectbox("Gender", ["Female", "Male", "Other"], key="sup_sl_gender")
-        with c2: rd  = st.text_input("Date of Birth", placeholder="DD/MM/YYYY", key="sup_sl_dob")
+        rd = st.date_input("Date of Birth", value=None, format="DD/MM/YYYY", key="sup_sl_dob")
         c3, c4 = st.columns(2)
         with c3: rb  = st.text_input("Blood Group", placeholder="e.g. O+", key="sup_sl_blood")
         with c4: rph = st.text_input("Phone", placeholder="+91 98765 43210", key="sup_sl_phone")
