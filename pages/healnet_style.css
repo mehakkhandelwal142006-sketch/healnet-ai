@@ -825,3 +825,40 @@ label {
 .stSelectbox, .stTextInput, .stNumberInput {
     color: #000 !important;
 }
+/* ══════════════════════════════════════════════════════
+   TARGETED FIXES — content overlay & card overflow
+══════════════════════════════════════════════════════ */
+
+/* Kill the white/light content overlay Streamlit adds */
+[data-testid="stMainBlockContainer"],
+[data-testid="block-container"],
+[data-testid="stMain"] > div,
+section[data-testid="stMain"],
+.main > div,
+div[class*="block-container"] {
+    background: transparent !important;
+    background-color: transparent !important;
+}
+
+/* Metric card value overflow fix — prevent text clipping */
+[data-testid="stMetricValue"] > div,
+[data-testid="stMetricValue"] > div > div {
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    font-size: clamp(1.1rem, 2.2vw, 2.0rem) !important;
+}
+
+/* Metric card label overflow */
+[data-testid="stMetricLabel"] > div,
+[data-testid="stMetricLabel"] p {
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+}
+
+/* Fix top black gap */
+[data-testid="stAppViewContainer"] {
+    background: transparent !important;
+    padding-top: 0 !important;
+}
