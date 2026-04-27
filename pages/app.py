@@ -5,7 +5,8 @@ import smtplib
 import pandas as pd
 import os
 import sys, os
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))  # project root
+sys.path.append(os.path.abspath(os.path.dirname(__file__)))                       # pages/ folder → finds utils/
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
@@ -27,7 +28,23 @@ from patient_db import (
 )
 from realtime_engine import RealTimeEngine
 from influx_plugin import write_vitals
-from pages.healnet_ai import HealNetAI
+from healnet_ai import HealNetAI
+try:
+    from pupil_detection import render_pupil_detection_page
+    PUPIL_OK = True
+except ImportError:
+    PUPIL_OK = False
+try:
+    from camera_vitals import render_camera_vitals_page
+    CAMERA_VITALS_OK = True
+except ImportError:
+    CAMERA_VITALS_OK = False
+try:
+    from camera_bp import render_camera_bp_page
+    CAMERA_BP_OK = True
+except ImportError:
+    CAMERA_BP_OK = False
+
 # ─────────────────────────────────────────────────────
 #  PAGE CONFIG
 # ─────────────────────────────────────────────────────
@@ -385,181 +402,7 @@ def _load_css():
         ".section-card{padding:14px 16px;}.cta-card{padding:22px 14px;}"
         ".vital-value{font-size:1.5rem;}}"
     )
-    DARK_TEXT = """
- 
-    /* ===== GLOBAL: every text element dark ===== */
-    .stApp * { color: #0a2540; }
- 
-    /* Main content text */
-    [data-testid="stMain"] p,
-    [data-testid="stMain"] span,
-    [data-testid="stMain"] div,
-    [data-testid="stMain"] label,
-    [data-testid="stMain"] li,
-    [data-testid="stMain"] td,
-    [data-testid="stMain"] th { color: #0a2540 !important; }
- 
-    h1,h2,h3,h4,h5,h6,
-    h1 *,h2 *,h3 *,h4 *,h5 *,h6 * { color: #0a2540 !important; }
- 
-    p, .stMarkdown p, [data-testid="stMarkdownContainer"] p,
-    [data-testid="stMarkdownContainer"] li,
-    [data-testid="stMarkdownContainer"] span { color: #1a3a5c !important; }
- 
-    /* ===== ALL INPUT BOXES: white background ===== */
-    [data-testid="stTextInput"] input,
-    [data-testid="stTextInput"] input:focus {
-        background: #ffffff !important; color: #0a2540 !important;
-        border: 1.5px solid #b0cce8 !important; border-radius: 10px !important; }
- 
-    [data-testid="stNumberInput"] input,
-    [data-testid="stNumberInput"] input:focus {
-        background: #ffffff !important; color: #0a2540 !important;
-        border: 1.5px solid #b0cce8 !important; border-radius: 10px !important; }
- 
-    [data-testid="stNumberInput"] button {
-        background: #eaf3ff !important; color: #0a2540 !important;
-        border-color: #b0cce8 !important; }
- 
-    [data-testid="stTextAreaInput"] textarea {
-        background: #ffffff !important; color: #0a2540 !important;
-        border: 1.5px solid #b0cce8 !important; border-radius: 10px !important; }
- 
-    /* Date input */
-    [data-testid="stDateInput"] input,
-    [data-testid="stDateInput"] div[data-baseweb="input"],
-    [data-testid="stDateInput"] input:focus {
-        background: #ffffff !important; color: #0a2540 !important;
-        border: 1.5px solid #b0cce8 !important; border-radius: 10px !important; }
- 
-    [data-baseweb="calendar"], [data-baseweb="calendar"] * {
-        background: #ffffff !important; color: #0a2540 !important; }
-    [data-baseweb="calendar"] button {
-        background: #eaf3ff !important; color: #0a2540 !important; }
-    [data-baseweb="calendar"] [aria-selected="true"] {
-        background: #3399ff !important; color: #ffffff !important; }
- 
-    /* Selectbox */
-    [data-testid="stSelectbox"] > div > div,
-    [data-testid="stSelectbox"] [data-baseweb="select"] > div {
-        background: #ffffff !important; color: #0a2540 !important;
-        border: 1.5px solid #b0cce8 !important; border-radius: 10px !important; }
-    [data-testid="stSelectbox"] span,
-    [data-testid="stSelectbox"] p,
-    [data-testid="stSelectbox"] div { color: #0a2540 !important; }
-    div[data-baseweb="popover"], div[data-baseweb="popover"] *,
-    ul[role="listbox"], ul[role="listbox"] * {
-        background: #ffffff !important; color: #0a2540 !important; }
-    li[role="option"]:hover, div[role="option"]:hover {
-        background: #ddeeff !important; }
- 
-    /* Multiselect */
-    [data-testid="stMultiSelect"] > div,
-    [data-testid="stMultiSelect"] [data-baseweb="select"] > div {
-        background: #ffffff !important; color: #0a2540 !important;
-        border: 1.5px solid #b0cce8 !important; border-radius: 10px !important; }
-    [data-testid="stMultiSelect"] span { color: #0a2540 !important; }
-    [data-testid="stMultiSelect"] [data-baseweb="tag"] {
-        background: #d0e8ff !important; color: #0a2540 !important; }
- 
-    /* ===== SLIDERS ===== */
-    [data-testid="stSlider"] label,
-    [data-testid="stSlider"] p,
-    [data-testid="stSlider"] span,
-    [data-testid="stSlider"] div[data-testid="stTickBarMin"],
-    [data-testid="stSlider"] div[data-testid="stTickBarMax"],
-    [data-testid="stSlider"] [data-testid="stSliderThumbValue"] {
-        color: #0a2540 !important; }
-    [data-testid="stSlider"] [data-baseweb="slider"] div[role="slider"] {
-        background: #ffffff !important; border: 2px solid #3399ff !important; }
- 
-    /* ===== RADIO (main content, not sidebar) ===== */
-    [data-testid="stMain"] [data-testid="stRadio"] label p,
-    [data-testid="stMain"] [data-testid="stRadio"] label span,
-    [data-testid="stMain"] [data-testid="stRadio"] label { color: #0a2540 !important; }
- 
-    /* ===== CHECKBOXES ===== */
-    [data-testid="stCheckbox"] label span,
-    [data-testid="stCheckbox"] label p { color: #0a2540 !important; }
-    [data-testid="stCheckbox"] [data-baseweb="checkbox"] {
-        background: #ffffff !important; border-color: #b0cce8 !important; }
- 
-    /* ===== TOGGLE (main content only) ===== */
-    [data-testid="stMain"] [data-testid="stToggle"] label p { color: #0a2540 !important; }
- 
-    /* ===== ALL LABELS ===== */
-    label { color: #2d5a8e !important; font-weight: 700 !important; }
- 
-    /* ===== TABS ===== */
-    [data-testid="stTabs"] button[role="tab"] {
-        color: #2d5a8e !important; background: rgba(255,255,255,0.50) !important; }
-    [data-testid="stTabs"] button[role="tab"][aria-selected="true"] {
-        color: #0055bb !important; border-bottom-color: #3399ff !important;
-        background: rgba(255,255,255,0.80) !important; }
-    [data-testid="stTabs"] button[role="tab"] p { color: inherit !important; }
- 
-    /* ===== FILE UPLOADER ===== */
-    [data-testid="stFileUploader"] {
-        background: #ffffff !important; border: 1.5px dashed #b0cce8 !important;
-        border-radius: 12px !important; }
-    [data-testid="stFileUploader"] span,
-    [data-testid="stFileUploader"] p,
-    [data-testid="stFileUploader"] small { color: #2d5a8e !important; }
- 
-    /* ===== METRIC CARDS ===== */
-    [data-testid="stMetricLabel"] p,
-    [data-testid="stMetricLabel"] div { color: #2d5a8e !important; }
-    [data-testid="stMetricValue"] div { color: #0a2540 !important; }
-    [data-testid="stMetricDelta"] div { color: #1a7a4a !important; }
- 
-    /* ===== EXPANDER ===== */
-    [data-testid="stExpander"] summary p,
-    [data-testid="stExpander"] summary span,
-    [data-testid="stExpander"] summary { color: #0a2540 !important; }
-    [data-testid="stExpander"] [data-testid="stExpanderDetails"] p,
-    [data-testid="stExpander"] [data-testid="stExpanderDetails"] span,
-    [data-testid="stExpander"] [data-testid="stExpanderDetails"] label { color: #0a2540 !important; }
- 
-    /* ===== ALERTS ===== */
-    [data-testid="stSuccess"] p, [data-testid="stSuccess"] span { color: #005a30 !important; }
-    [data-testid="stWarning"] p, [data-testid="stWarning"] span { color: #7a4500 !important; }
-    [data-testid="stError"]   p, [data-testid="stError"]   span { color: #7a0018 !important; }
-    [data-testid="stInfo"]    p, [data-testid="stInfo"]    span { color: #003070 !important; }
- 
-    /* ===== PLACEHOLDER TEXT ===== */
-    ::placeholder { color: #8aaac8 !important; opacity: 1 !important; }
- 
-    /* ===== CAPTION / HELP TEXT ===== */
-    [data-testid="stCaptionContainer"] p, small, .stCaption { color: #4a7090 !important; }
- 
-    /* ===== CODE BLOCKS ===== */
-    code, pre, [data-testid="stCode"] {
-        background: #f0f6ff !important; color: #0a2540 !important;
-        border: 1px solid #c8dff0 !important; }
- 
-    /* ===== SIDEBAR: keep WHITE text on blue ===== */
-    [data-testid="stSidebar"],
-    [data-testid="stSidebar"] *,
-    [data-testid="stSidebar"] p,
-    [data-testid="stSidebar"] span,
-    [data-testid="stSidebar"] label,
-    [data-testid="stSidebar"] div { color: #ffffff !important; }
-    [data-testid="stSidebar"] input {
-        background: rgba(255,255,255,0.15) !important;
-        color: #ffffff !important; border-color: rgba(255,255,255,0.30) !important; }
-    [data-testid="stSidebar"] input::placeholder { color: rgba(255,255,255,0.50) !important; }
- 
-    /* ===== WEBKIT TEXT FILL (stops grey-out on autofill) ===== */
-    input, textarea, select,
-    [data-baseweb="input"] input,
-    [data-baseweb="textarea"] textarea {
-        -webkit-text-fill-color: #0a2540 !important; }
-    [data-testid="stSidebar"] input {
-        -webkit-text-fill-color: #ffffff !important; }
- 
-    """
- 
-    st.markdown(f"<style>{THEME}{DARK_TEXT}{external_css}</style>", unsafe_allow_html=True)
+    st.markdown(f"<style>{THEME}{external_css}</style>", unsafe_allow_html=True)
 
 _load_css()
 
@@ -737,6 +580,9 @@ with st.sidebar:
         min-width: 210px !important;
         max-width: 210px !important;
         transform: none !important;
+        position: relative !important;
+        overflow-x: hidden !important;
+        overflow-y: auto !important;
     }
     [data-testid="stSidebarContent"],
     [data-testid="stSidebarUserContent"] {
@@ -745,15 +591,88 @@ with st.sidebar:
         opacity: 1 !important;
         background: transparent !important;
         width: 100% !important;
+        position: relative !important;
+        z-index: 2 !important;
     }
     button[data-testid="stSidebarCollapseButton"],
     button[data-testid="stSidebarCollapsedControl"] {
         display: none !important;
     }
-    section[data-testid="stSidebar"]::-webkit-scrollbar { width: 4px; }
-    section[data-testid="stSidebar"]::-webkit-scrollbar-track { background: #2F80C9; }
-    section[data-testid="stSidebar"]::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.35); border-radius: 4px; }
+    /* Scrollbar — always visible */
+    section[data-testid="stSidebar"]::-webkit-scrollbar { width: 5px !important; }
+    section[data-testid="stSidebar"]::-webkit-scrollbar-track { background: rgba(255,255,255,0.10) !important; border-radius: 4px !important; }
+    section[data-testid="stSidebar"]::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.50) !important; border-radius: 4px !important; }
+    section[data-testid="stSidebar"]::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.75) !important; }
+    section[data-testid="stSidebar"] { scrollbar-width: thin !important; scrollbar-color: rgba(255,255,255,0.50) rgba(255,255,255,0.10) !important; }
+
+    /* Wave animations */
+    .sidebar-waves {
+        position: fixed !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        width: 210px !important;
+        height: 280px !important;
+        z-index: 1 !important;
+        pointer-events: none !important;
+        overflow: hidden !important;
+    }
+    .sidebar-waves svg {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 210px;
+    }
+    @keyframes waveA { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+    @keyframes waveB { 0% { transform: translateX(-50%); } 100% { transform: translateX(0); } }
+    @keyframes waveC { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+    @keyframes waveD { 0% { transform: translateX(-50%); } 100% { transform: translateX(0); } }
+    @keyframes waveE { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+    .waveA { animation: waveA 5s linear infinite; }
+    .waveB { animation: waveB 7s linear infinite; }
+    .waveC { animation: waveC 9s linear infinite; }
+    .waveD { animation: waveD 11s linear infinite; }
+    .waveE { animation: waveE 14s linear infinite; }
     </style>""", unsafe_allow_html=True)
+
+    st.markdown("""
+    <div class="sidebar-waves">
+      <!-- Wave 1 — tallest, fastest, lightest -->
+      <svg viewBox="0 0 420 140" xmlns="http://www.w3.org/2000/svg" style="height:140px;">
+        <g class="waveA">
+          <path d="M0,70 C45,35 90,105 135,70 C180,35 225,105 270,70 C315,35 360,105 420,70 L420,140 L0,140 Z" fill="rgba(255,255,255,0.07)"/>
+          <path d="M420,70 C465,35 510,105 555,70 C600,35 645,105 690,70 C735,35 780,105 840,70 L840,140 L420,140 Z" fill="rgba(255,255,255,0.07)"/>
+        </g>
+      </svg>
+      <!-- Wave 2 -->
+      <svg viewBox="0 0 420 115" xmlns="http://www.w3.org/2000/svg" style="height:115px;position:absolute;bottom:0;">
+        <g class="waveB">
+          <path d="M0,55 C55,22 110,88 165,55 C220,22 275,88 330,55 C385,22 420,88 420,55 L420,115 L0,115 Z" fill="rgba(255,255,255,0.09)"/>
+          <path d="M420,55 C475,22 530,88 585,55 C640,22 695,88 750,55 C805,22 840,88 840,55 L840,115 L420,115 Z" fill="rgba(255,255,255,0.09)"/>
+        </g>
+      </svg>
+      <!-- Wave 3 -->
+      <svg viewBox="0 0 420 95" xmlns="http://www.w3.org/2000/svg" style="height:95px;position:absolute;bottom:0;">
+        <g class="waveC">
+          <path d="M0,45 C60,18 120,72 180,45 C240,18 300,72 360,45 C420,18 420,72 420,45 L420,95 L0,95 Z" fill="rgba(255,255,255,0.11)"/>
+          <path d="M420,45 C480,18 540,72 600,45 C660,18 720,72 780,45 C840,18 840,72 840,45 L840,95 L420,95 Z" fill="rgba(255,255,255,0.11)"/>
+        </g>
+      </svg>
+      <!-- Wave 4 -->
+      <svg viewBox="0 0 420 75" xmlns="http://www.w3.org/2000/svg" style="height:75px;position:absolute;bottom:0;">
+        <g class="waveD">
+          <path d="M0,38 C52,14 105,62 157,38 C210,14 262,62 315,38 C367,14 420,62 420,38 L420,75 L0,75 Z" fill="rgba(255,255,255,0.08)"/>
+          <path d="M420,38 C472,14 525,62 577,38 C630,14 682,62 735,38 C787,14 840,62 840,38 L840,75 L420,75 Z" fill="rgba(255,255,255,0.08)"/>
+        </g>
+      </svg>
+      <!-- Wave 5 — thinnest, slowest, most opaque -->
+      <svg viewBox="0 0 420 55" xmlns="http://www.w3.org/2000/svg" style="height:55px;position:absolute;bottom:0;">
+        <g class="waveE">
+          <path d="M0,28 C65,10 130,46 195,28 C260,10 325,46 420,28 L420,55 L0,55 Z" fill="rgba(255,255,255,0.13)"/>
+          <path d="M420,28 C485,10 550,46 615,28 C680,10 745,46 840,28 L840,55 L420,55 Z" fill="rgba(255,255,255,0.13)"/>
+        </g>
+      </svg>
+    </div>
+    """, unsafe_allow_html=True)
     st.html(f"""
     <div style="padding:18px 14px 0 14px;">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:2px;">
@@ -781,7 +700,7 @@ with st.sidebar:
                   margin-bottom:12px;"></div>
     </div>""")
 
-    nav_options = ["Dashboard","Patient Management","Health Monitoring","Report Analysis"]
+    nav_options = ["Dashboard","Patient Management","Health Monitoring","Report Analysis","Pupil Detection","Camera Vitals","BP Camera"]
     sel_nav = st.radio("Navigation", nav_options,
                        index=nav_options.index(st.session_state.page) if st.session_state.page in nav_options else 0,
                        label_visibility="collapsed")
@@ -917,7 +836,7 @@ if page == "Dashboard":
 
     st.markdown("---")
     sub_label("◈ Quick Actions")
-    qa1,qa2,qa3,qa4 = st.columns(4)
+    qa1,qa2,qa3,qa4,qa5 = st.columns(5)
     with qa1:
         st.html("""<div class="dashboard-card"><h3>👤 Patient Management</h3>
           <p>Register, search, view full profiles, edit records, and manage the monitoring queue.</p></div>""")
@@ -940,6 +859,11 @@ if page == "Dashboard":
           <p>Upload X-rays or scans for AI-powered diagnostic predictions.</p></div>""")
         if st.button("Analyse Report →", key="d_rep", use_container_width=True):
             st.session_state.page = "Report Analysis"; st.rerun()
+    with qa5:
+        st.html("""<div class="dashboard-card"><h3>👁 Pupil Detection</h3>
+          <p>AI pupil screening for dilation, constriction, anisocoria and shape irregularities.</p></div>""")
+        if st.button("Pupil Analysis →", key="d_pupil", use_container_width=True):
+            st.session_state.page = "Pupil Detection"; st.rerun()
 
     if st.session_state.selected_patient:
         sp = st.session_state.selected_patient
@@ -1594,19 +1518,66 @@ elif page == "Health Monitoring":
     height    = data.get("height", 0)
     bmi       = round(weight / ((height / 100) ** 2), 1) if height > 0 else 0
 
-    # ── Live metrics ─────────────────────────────────────────────────
+    # ── Normal ranges reference ──────────────────────────────────────
+    NORMAL_RANGES = {
+        "systolic":   (90, 120,  "mmHg",  "Systolic BP"),
+        "diastolic":  (60, 80,   "mmHg",  "Diastolic BP"),
+        "heart_rate": (60, 100,  "bpm",   "Heart Rate"),
+        "spo2":       (95, 100,  "%",     "SpO₂"),
+        "blood_sugar":(70, 140,  "mg/dL", "Blood Sugar"),
+        "temperature":(97.0,99.0,"°F",    "Temperature"),
+        "respiratory_rate":(12,20,"br/min","Resp. Rate"),
+        "bmi":        (18.5,24.9,"",      "BMI"),
+    }
+
+    # ── Vitals history buffer (keeps last 20 readings per patient) ────
+    hist_key = f"vitals_hist_{patient_id}"
+    if hist_key not in st.session_state:
+        st.session_state[hist_key] = []
+
+    current_snapshot = {
+        "systolic": systolic, "diastolic": diastolic,
+        "heart_rate": heart, "spo2": spo2,
+        "blood_sugar": sugar, "temperature": temp,
+        "respiratory_rate": resp, "bmi": bmi,
+    }
+    hist = st.session_state[hist_key]
+    hist.append(current_snapshot)
+    if len(hist) > 20:
+        hist = hist[-20:]
+    st.session_state[hist_key] = hist
+
+    # ── Trend helper ─────────────────────────────────────────────────
+    def get_trend(key):
+        if len(hist) < 2:
+            return 0, "→"
+        prev = hist[-2][key]
+        curr = hist[-1][key]
+        diff = round(curr - prev, 1)
+        if diff > 0:   return diff, "↑"
+        elif diff < 0: return diff, "↓"
+        else:          return 0,    "→"
+
+    def trend_delta(key):
+        diff, arrow = get_trend(key)
+        if diff == 0: return None
+        return diff
+
+    # ── Live metrics with trend deltas ───────────────────────────────
     st.subheader("📊 Live Readings")
+    st.caption("↑↓ arrows show change vs previous reading · Normal ranges shown in each card below")
+
     col1, col2, col3, col4 = st.columns(4)
-    col1.metric("Systolic",   systolic,  "mmHg")
-    col2.metric("Diastolic",  diastolic, "mmHg")
-    col3.metric("Heart Rate", heart,     "bpm")
-    col4.metric("SpO₂",       spo2,      "%")
+    col1.metric("Systolic BP",  systolic,  delta=trend_delta("systolic"),  delta_color="inverse")
+    col2.metric("Diastolic BP", diastolic, delta=trend_delta("diastolic"), delta_color="inverse")
+    col3.metric("Heart Rate",   heart,     delta=trend_delta("heart_rate"),delta_color="normal")
+    col4.metric("SpO₂",         spo2,      delta=trend_delta("spo2"),      delta_color="normal")
 
     col5, col6, col7, col8 = st.columns(4)
-    col5.metric("Blood Sugar",  sugar, "mg/dL")
-    col6.metric("Temp",         temp,  "°F")
-    col7.metric("Resp. Rate",   resp,  "br/min")
-    col8.metric("BMI",          bmi)
+    col5.metric("Blood Sugar",  sugar, delta=trend_delta("blood_sugar"),     delta_color="inverse")
+    col6.metric("Temperature",  temp,  delta=trend_delta("temperature"),     delta_color="inverse")
+    col7.metric("Resp. Rate",   resp,  delta=trend_delta("respiratory_rate"),delta_color="normal")
+    col8.metric("BMI",          bmi,   delta=trend_delta("bmi"),             delta_color="inverse")
     st.markdown("---")
 
     # ── Classification ────────────────────────────────────────────────
@@ -1629,7 +1600,7 @@ elif page == "Health Monitoring":
     }
 
     # ── 🤖 AI Predictive Insights ─────────────────────────────────────
-    from pages.healnet_ai import HealNetAI
+    from utils.healnet_ai import HealNetAI
 
     ai = HealNetAI(
         patient_id,
@@ -1796,30 +1767,130 @@ elif page == "Health Monitoring":
                 key="dl_alert_log",
             )
 
-    # ── Vital status cards ────────────────────────────────────────────
+    # ── Vital status cards with normal ranges + trend indicators ────────
     st.subheader("◈ Vital Sign Status")
 
-    def vital_card(label, value, unit, level, message):
-        text = f"**{label}** — {value} {unit}\n{level}: {message}"
-        if level == "NORMAL":
-            st.success(text)
-        elif level in ("MODERATE", "LOW"):
-            st.warning(text)
+    def trend_badge(key):
+        diff, arrow = get_trend(key)
+        if arrow == "↑":
+            color = "#e05050"
+        elif arrow == "↓":
+            color = "#3399ff"
         else:
-            st.error(text)
+            color = "#888"
+        return f'''<span style="font-size:.85rem;font-weight:700;color:{color};
+                    background:rgba(0,0,0,0.06);border-radius:4px;padding:1px 6px;
+                    margin-left:6px;">{arrow} {abs(diff) if diff != 0 else ""}</span>'''
+
+    def vital_card(label, value, unit, level, message, hist_key_name, normal_low, normal_high):
+        trend_html = trend_badge(hist_key_name)
+        normal_str = f"Normal: {normal_low}–{normal_high} {unit}".strip()
+        text_body = (
+            f"**{label}** — {value} {unit}  "
+            + f"\n🎯 *{normal_str}*  "
+            + f"\n{level}: {message}"
+        )
+        icon = "✅" if level == "NORMAL" else ("⚠️" if level in ("MODERATE","LOW") else "🚨")
+        badge_color = "#006640" if level == "NORMAL" else ("#7a4500" if level in ("MODERATE","LOW") else "#8a0020")
+        bg_color = "rgba(220,255,235,0.85)" if level == "NORMAL" else ("rgba(255,248,210,0.85)" if level in ("MODERATE","LOW") else "rgba(255,220,225,0.85)")
+        border_color = "#00c878" if level == "NORMAL" else ("#e0a000" if level in ("MODERATE","LOW") else "#dd2844")
+
+        st.markdown(
+            f'''<div style="background:{bg_color};border:1px solid {border_color};
+                border-left:4px solid {border_color};border-radius:10px;
+                padding:12px 16px;margin-bottom:8px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px;">
+                    <span style="font-weight:700;font-size:.95rem;color:{badge_color};">{icon} {label}</span>
+                    <div>{trend_html}</div>
+                </div>
+                <div style="font-size:1.4rem;font-weight:800;color:{badge_color};margin:4px 0;">
+                    {value} <span style="font-size:.8rem;font-weight:500;">{unit}</span>
+                </div>
+                <div style="font-size:.72rem;color:#2d5a8e;font-weight:600;
+                            background:rgba(255,255,255,0.6);border-radius:4px;
+                            padding:2px 8px;display:inline-block;margin-bottom:4px;">
+                    🎯 {normal_str}
+                </div>
+                <div style="font-size:.78rem;color:{badge_color};margin-top:2px;">
+                    <strong>{level}</strong>: {message}
+                </div>
+            </div>''',
+            unsafe_allow_html=True
+        )
 
     c1, c2 = st.columns(2)
 
     with c1:
-        vital_card("Blood Pressure", f"{systolic}/{diastolic}", "mmHg", bp_level, bp_msg)
-        vital_card("Heart Rate", f"{heart}", "bpm", hr_level, hr_msg)
-        vital_card("SpO₂", f"{spo2}", "%", spo2_level, spo2_msg)
-        vital_card("Temperature", f"{temp}", "°F", tmp_level, tmp_msg)
+        vital_card("Blood Pressure", f"{systolic}/{diastolic}", "mmHg", bp_level, bp_msg,
+                   "systolic", "90/60", "120/80")
+        vital_card("Heart Rate", f"{heart}", "bpm", hr_level, hr_msg,
+                   "heart_rate", 60, 100)
+        vital_card("SpO₂", f"{spo2}", "%", spo2_level, spo2_msg,
+                   "spo2", 95, 100)
+        vital_card("Temperature", f"{temp}", "°F", tmp_level, tmp_msg,
+                   "temperature", 97.0, 99.0)
 
     with c2:
-        vital_card("Blood Sugar", f"{sugar}", "mg/dL", sg_level, sg_msg)
-        vital_card("Respiratory Rate", f"{resp}", "breaths/min", rr_level, rr_msg)
-        vital_card("BMI", f"{bmi}", "", bmi_level, bmi_msg)
+        vital_card("Blood Sugar", f"{sugar}", "mg/dL", sg_level, sg_msg,
+                   "blood_sugar", 70, 140)
+        vital_card("Respiratory Rate", f"{resp}", "breaths/min", rr_level, rr_msg,
+                   "respiratory_rate", 12, 20)
+        vital_card("BMI", f"{bmi}", "", bmi_level, bmi_msg,
+                   "bmi", 18.5, 24.9)
+
+    # ── Line Charts ──────────────────────────────────────────────────
+    st.markdown("---")
+    st.subheader("📈 Vitals Trend Charts")
+
+    if len(hist) < 2:
+        st.info("📡 Accumulating data... Charts will appear after 2+ readings. Keep monitoring active.")
+    else:
+        import pandas as _pd_alias
+
+        readings_index = list(range(1, len(hist) + 1))
+
+        chart_tab1, chart_tab2, chart_tab3, chart_tab4 = st.tabs([
+            "🫀 Blood Pressure & Heart Rate",
+            "🫁 SpO₂ & Respiratory",
+            "🌡️ Temperature & Blood Sugar",
+            "⚖️ BMI"
+        ])
+
+        with chart_tab1:
+            bp_df = _pd_alias.DataFrame({
+                "Reading #":  readings_index,
+                "Systolic":   [h["systolic"]   for h in hist],
+                "Diastolic":  [h["diastolic"]  for h in hist],
+                "Heart Rate": [h["heart_rate"] for h in hist],
+            }).set_index("Reading #")
+            st.caption("Normal — Systolic: 90–120 mmHg · Diastolic: 60–80 mmHg · Heart Rate: 60–100 bpm")
+            st.line_chart(bp_df, use_container_width=True, height=280)
+
+        with chart_tab2:
+            spo2_df = _pd_alias.DataFrame({
+                "Reading #":        readings_index,
+                "SpO₂ (%)":         [h["spo2"]              for h in hist],
+                "Resp. Rate":       [h["respiratory_rate"]  for h in hist],
+            }).set_index("Reading #")
+            st.caption("Normal — SpO₂: 95–100% · Respiratory Rate: 12–20 breaths/min")
+            st.line_chart(spo2_df, use_container_width=True, height=280)
+
+        with chart_tab3:
+            temp_df = _pd_alias.DataFrame({
+                "Reading #":    readings_index,
+                "Temperature (°F)": [h["temperature"]  for h in hist],
+                "Blood Sugar (mg/dL)": [h["blood_sugar"] for h in hist],
+            }).set_index("Reading #")
+            st.caption("Normal — Temperature: 97–99°F · Blood Sugar: 70–140 mg/dL")
+            st.line_chart(temp_df, use_container_width=True, height=280)
+
+        with chart_tab4:
+            bmi_df = _pd_alias.DataFrame({
+                "Reading #": readings_index,
+                "BMI":       [h["bmi"] for h in hist],
+            }).set_index("Reading #")
+            st.caption("Normal BMI: 18.5–24.9")
+            st.line_chart(bmi_df, use_container_width=True, height=280)
 
     # ── Overall health status ─────────────────────────────────────────
     st.subheader("◈ Overall Health Status")
@@ -1873,7 +1944,26 @@ elif page == "Report Analysis":
 - Cardiac silhouette within normal limits
 
 **Recommendation:** Routine follow-up as advised by physician.""")
-                
+
+
+# ─────────────────────────────────────────────────────
+#  PUPIL DETECTION
+# ─────────────────────────────────────────────────────
+elif page == "Pupil Detection":
+    breadcrumb(["Dashboard", "Pupil Detection"], "Pupil Detection")
+    if PUPIL_OK:
+        render_pupil_detection_page()
+    else:
+        st.error("pupil_detection.py not found. Place it in the pages/ folder.")
+        st.code("pip install opencv-python mediapipe numpy", language="bash")
+
+elif page == "Camera Vitals":
+    breadcrumb(["Dashboard", "Camera Vitals"], "Camera Vitals")
+    render_camera_vitals_page()
+
+elif page == "BP Camera":
+    breadcrumb(["Dashboard", "BP Camera"], "BP Camera")
+    render_camera_bp_page()
 
 
 st.markdown("""
