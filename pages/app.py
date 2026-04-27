@@ -39,11 +39,6 @@ try:
     CAMERA_VITALS_OK = True
 except ImportError:
     CAMERA_VITALS_OK = False
-try:
-    from camera_bp import render_camera_bp_page
-    CAMERA_BP_OK = True
-except ImportError:
-    CAMERA_BP_OK = False
 
 # ─────────────────────────────────────────────────────
 #  PAGE CONFIG
@@ -579,8 +574,6 @@ with st.sidebar:
         width: 210px !important;
         min-width: 210px !important;
         max-width: 210px !important;
-        transform: none !important;
-        position: relative !important;
         overflow-x: hidden !important;
         overflow-y: auto !important;
     }
@@ -594,9 +587,16 @@ with st.sidebar:
         position: relative !important;
         z-index: 2 !important;
     }
-    button[data-testid="stSidebarCollapseButton"],
-    button[data-testid="stSidebarCollapsedControl"] {
-        display: none !important;
+    /* Hide collapse button on desktop only — mobile CSS in healnet_style.css shows it */
+    @media (min-width: 769px) {
+        button[data-testid="stSidebarCollapseButton"],
+        button[data-testid="stSidebarCollapsedControl"] {
+            display: none !important;
+        }
+        section[data-testid="stSidebar"] {
+            transform: none !important;
+            position: relative !important;
+        }
     }
     /* Scrollbar — always visible */
     section[data-testid="stSidebar"]::-webkit-scrollbar { width: 5px !important; }
@@ -700,7 +700,7 @@ with st.sidebar:
                   margin-bottom:12px;"></div>
     </div>""")
 
-    nav_options = ["Dashboard","Patient Management","Health Monitoring","Report Analysis","Pupil Detection","Camera Vitals","BP Camera"]
+    nav_options = ["Dashboard","Patient Management","Health Monitoring","Report Analysis","Pupil Detection","Camera Vitals"]
     sel_nav = st.radio("Navigation", nav_options,
                        index=nav_options.index(st.session_state.page) if st.session_state.page in nav_options else 0,
                        label_visibility="collapsed")
@@ -1954,16 +1954,27 @@ elif page == "Pupil Detection":
     if PUPIL_OK:
         render_pupil_detection_page()
     else:
-        st.error("pupil_detection.py not found. Place it in the pages/ folder.")
-        st.code("pip install opencv-python mediapipe numpy", language="bash")
+        st.html("""
+        <div style="background:rgba(0,175,215,0.06);border:1px solid rgba(0,200,255,0.22);
+                    border-left:4px solid #00d8ff;border-radius:12px;
+                    padding:28px 28px;margin:20px 0;text-align:center;">
+          <div style="font-size:2.5rem;margin-bottom:12px;">👁️</div>
+          <div style="font-family:'Rajdhani',sans-serif;font-size:1.1rem;font-weight:700;
+                      color:#00d8ff;text-transform:uppercase;letter-spacing:.10em;
+                      margin-bottom:10px;">Pupil Detection — Coming Soon</div>
+          <div style="font-size:.85rem;color:#5888aa;line-height:1.7;max-width:420px;margin:0 auto;">
+            This module uses your device camera and AI to analyse pupil response.<br>
+            It will be available in the next HealNet update.<br><br>
+            <span style="color:#00f5c4;font-weight:600;">
+              Meanwhile, try Camera Vitals or BP Camera from the sidebar.
+            </span>
+          </div>
+        </div>
+        """)
 
 elif page == "Camera Vitals":
     breadcrumb(["Dashboard", "Camera Vitals"], "Camera Vitals")
     render_camera_vitals_page()
-
-elif page == "BP Camera":
-    breadcrumb(["Dashboard", "BP Camera"], "BP Camera")
-    render_camera_bp_page()
 
 
 st.markdown("""
@@ -1971,9 +1982,27 @@ st.markdown("""
 
 /* ================= FINAL GLOBAL FIX ================= */
 
-/* Reset weird opacity/text-fill issues */
-* {
+/* Reset weird opacity/text-fill issues — scoped away from iframes */
+:not(iframe) * {
     -webkit-text-fill-color: unset !important;
+}
+
+/* ===== MOBILE OVERLAP FIX for Camera pages ===== */
+/* Prevents the page header / breadcrumb overlapping the widget on mobile */
+@media (max-width: 768px) {
+    [data-testid="stMainBlockContainer"] > div > div:first-child {
+        padding-top: 4px !important;
+    }
+    /* Give iframes breathing room so they don't collide with text above */
+    iframe {
+        margin-top: 8px !important;
+        display: block !important;
+    }
+    /* Camera page sub-label should not overlap */
+    .sub-label {
+        margin-top: 6px !important;
+        margin-bottom: 6px !important;
+    }
 }
 
 /* ===== INPUTS ===== */
