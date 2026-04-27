@@ -94,7 +94,7 @@ def _load_css():
         "[data-testid='stMainBlockContainer'],[data-testid='block-container']"
         "{padding-top:1.5rem!important;}"
 
-        # ── Sidebar: always pinned open, blue, correct width ──
+        # ── Sidebar: pinned open on desktop, slide-in on mobile ──
         "section[data-testid='stSidebar']"
         "{transform:none!important;min-width:210px!important;"
         "max-width:210px!important;width:210px!important;"
@@ -108,10 +108,11 @@ def _load_css():
         "{display:block!important;visibility:visible!important;opacity:1!important;"
         "background:transparent!important;width:100%!important;}"
 
-        # Hide the collapse/expand toggle buttons permanently
+        # Desktop: hide toggle buttons (sidebar always open)
+        "@media(min-width:769px){"
         "button[data-testid='stSidebarCollapseButton'],"
         "button[data-testid='stSidebarCollapsedControl']"
-        "{display:none!important;}"
+        "{display:none!important;}}"
 
         "section[data-testid='stSidebar'] > div:first-child"
         "{width:210px!important;}"
@@ -396,11 +397,158 @@ def _load_css():
         ".email-status-ok{font-size:.73rem;color:#006640!important;margin-top:8px;}"
         ".email-status-err{font-size:.73rem;color:#8a0020!important;margin-top:8px;}"
 
+        # ══════════════════════════════════════════════
+        # MOBILE OVERRIDES  (≤ 768 px)
+        # ══════════════════════════════════════════════
         "@media(max-width:768px){"
-        "h1{font-size:1.2rem!important;}"
-        "[data-testid='stMetricValue']>div{font-size:1.4rem!important;}"
-        ".section-card{padding:14px 16px;}.cta-card{padding:22px 14px;}"
-        ".vital-value{font-size:1.5rem;}}"
+
+        # Sidebar: slide-in drawer on mobile
+        "section[data-testid='stSidebar']{"
+        "position:fixed!important;top:0!important;left:0!important;"
+        "height:100vh!important;z-index:9999!important;"
+        "min-width:0!important;max-width:82vw!important;width:82vw!important;"
+        "transform:translateX(-100%)!important;"
+        "transition:transform .28s cubic-bezier(.4,0,.2,1)!important;"
+        "box-shadow:4px 0 32px rgba(0,0,0,.35)!important;}"
+
+        "section[data-testid='stSidebar'][aria-expanded='true']{"
+        "transform:translateX(0)!important;}"
+
+        # Hamburger button — visible & tappable on mobile
+        "button[data-testid='stSidebarCollapseButton'],"
+        "button[data-testid='stSidebarCollapsedControl']{"
+        "display:flex!important;position:fixed!important;"
+        "top:10px!important;left:10px!important;"
+        "z-index:10000!important;"
+        "background:rgba(47,128,201,.90)!important;"
+        "border:1px solid rgba(255,255,255,.35)!important;"
+        "border-radius:10px!important;"
+        "width:44px!important;height:44px!important;"
+        "align-items:center!important;justify-content:center!important;"
+        "box-shadow:0 2px 14px rgba(0,0,0,.30)!important;cursor:pointer!important;}"
+
+        "button[data-testid='stSidebarCollapseButton'] svg,"
+        "button[data-testid='stSidebarCollapsedControl'] svg{"
+        "color:#ffffff!important;fill:#ffffff!important;}"
+
+        # Main content — full width, top pad for hamburger
+        "[data-testid='stMain'],"
+        "[data-testid='stAppViewContainer']>section:last-child{"
+        "margin-left:0!important;padding-left:8px!important;"
+        "padding-right:8px!important;padding-top:62px!important;"
+        "width:100vw!important;max-width:100vw!important;}"
+
+        "[data-testid='stMainBlockContainer'],"
+        "[data-testid='block-container']{"
+        "padding:4px 8px!important;max-width:100vw!important;}"
+
+        # Prevent horizontal overflow
+        "body,.stApp{overflow-x:hidden!important;}"
+
+        # Typography scale-down
+        "h1,h1*{font-size:clamp(1rem,5vw,1.3rem)!important;}"
+        "h2,h2*{font-size:clamp(.9rem,4vw,1.1rem)!important;}"
+        "h3,h3*{font-size:clamp(.85rem,3.5vw,1rem)!important;}"
+        "p,li,span,label,div{font-size:.82rem!important;}"
+
+        # Metric cards
+        "[data-testid='stMetric']{"
+        "padding:12px 14px!important;border-radius:12px!important;}"
+        "[data-testid='stMetricValue']>div{"
+        "font-size:clamp(1.3rem,5.5vw,1.8rem)!important;}"
+        "[data-testid='stMetricLabel']>div{font-size:.62rem!important;}"
+
+        # Columns: wrap to 2-col grid
+        "[data-testid='stHorizontalBlock']{"
+        "flex-wrap:wrap!important;gap:8px!important;}"
+        "[data-testid='stHorizontalBlock']>[data-testid='stVerticalBlockBorderWrapper']{"
+        "min-width:calc(50% - 6px)!important;flex:1 1 calc(50% - 6px)!important;}"
+
+        # Section / CTA cards
+        ".section-card{padding:12px 14px!important;border-radius:10px!important;margin-bottom:8px!important;}"
+        ".section-card h3{font-size:.82rem!important;}"
+        ".section-card p{font-size:.74rem!important;}"
+        ".cta-card{padding:18px 12px!important;}"
+        ".cta-card-title{font-size:.90rem!important;}"
+        ".cta-card-sub{font-size:.78rem!important;}"
+
+        # Vital values
+        ".vital-value{font-size:1.5rem!important;}"
+        ".vital-unit{font-size:.65rem!important;}"
+        ".vital-label{font-size:.62rem!important;}"
+
+        # Patient cards
+        ".patient-card{padding:11px 14px!important;margin-bottom:5px!important;}"
+        ".patient-card-name{font-size:.90rem!important;}"
+        ".patient-card-meta{font-size:.66rem!important;}"
+        ".patient-card-id{font-size:.70rem!important;}"
+
+        # Buttons — full width, 44 px tap target
+        ".stButton>button{"
+        "width:100%!important;padding:.65rem 1rem!important;"
+        "font-size:.78rem!important;min-height:44px!important;"
+        "border-radius:9px!important;letter-spacing:.06em!important;}"
+
+        # Inputs — 16 px prevents iOS auto-zoom
+        "[data-testid='stTextInput'] input,"
+        "[data-testid='stNumberInput'] input,"
+        "[data-testid='stTextAreaInput'] textarea{"
+        "font-size:16px!important;min-height:44px!important;padding:10px 12px!important;}"
+
+        "[data-testid='stSelectbox']>div>div,"
+        "[data-testid='stSelectbox']>div>div>div{"
+        "font-size:16px!important;min-height:44px!important;}"
+
+        # Tables: horizontal scroll
+        "[data-testid='stDataFrame'],[data-testid='stDataFrame']>div{"
+        "overflow-x:auto!important;max-width:100vw!important;display:block!important;}"
+        "[data-testid='stDataFrame'] td{font-size:.75rem!important;padding:6px 8px!important;max-width:160px!important;}"
+        "[data-testid='stDataFrame'] th{font-size:.65rem!important;padding:6px 8px!important;}"
+
+        # iframes (camera widgets)
+        "iframe{width:100%!important;max-width:100%!important;}"
+
+        # Breadcrumb / sub-label
+        ".breadcrumb{font-size:.62rem!important;padding:5px 10px!important;gap:5px!important;}"
+        ".sub-label{font-size:.62rem!important;letter-spacing:.10em!important;}"
+
+        # Expander
+        "[data-testid='stExpander'] summary,"
+        "[data-testid='stExpander'] summary*{font-size:.78rem!important;padding:10px 12px!important;}"
+
+        # Tabs
+        "[data-testid='stTabs'] [role='tab']{font-size:.72rem!important;padding:7px 9px!important;}"
+
+        # Alert banners
+        ".alert-banner{padding:12px 14px!important;}"
+        ".alert-banner-title{font-size:.76rem!important;}"
+        ".alert-row{font-size:.74rem!important;gap:6px!important;flex-wrap:wrap!important;}"
+
+        # Sidebar nav tap targets
+        "[data-testid='stSidebar'] [data-testid='stRadio'] label{"
+        "padding:6px 4px!important;min-height:40px!important;"
+        "display:flex!important;align-items:center!important;}"
+        "[data-testid='stSidebar'] [data-testid='stRadio'] label p{font-size:.80rem!important;}"
+
+        # Badges
+        ".badge,.alert-badge{font-size:.60rem!important;padding:2px 7px!important;}"
+
+        # Thinner scrollbar
+        "::-webkit-scrollbar{width:3px;height:3px;}"
+        "}"
+
+        # ── Extra-small phones ≤ 400 px ──
+        "@media(max-width:400px){"
+        "h1,h1*{font-size:.88rem!important;}"
+        "[data-testid='stHorizontalBlock']>[data-testid='stVerticalBlockBorderWrapper']{"
+        "min-width:100%!important;flex:1 1 100%!important;}"
+        "[data-testid='stMetricValue']>div{font-size:1.15rem!important;}"
+        ".vital-value{font-size:1.25rem!important;}"
+        ".stButton>button{font-size:.72rem!important;padding:.55rem .8rem!important;}"
+        "[data-testid='stTabs'] [role='tab']{font-size:.65rem!important;padding:6px 7px!important;}"
+        ".section-card{padding:10px 11px!important;}"
+        ".patient-card{padding:9px 11px!important;}"
+        "}"
     )
     st.markdown(f"<style>{THEME}{external_css}</style>", unsafe_allow_html=True)
 
