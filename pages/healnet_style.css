@@ -354,245 +354,17 @@ hr { border-color:var(--b-faint) !important; opacity:0.45 !important; }
 .timeline-card { background:rgba(245,166,35,0.05); border:1px solid rgba(245,166,35,0.22); border-left:4px solid var(--amber); border-radius:10px; padding:16px 20px; margin-bottom:12px; }
 .timeline-card-title { font-family:var(--f-head); font-size:0.80rem; font-weight:700; color:var(--amber) !important; text-transform:uppercase; letter-spacing:0.12em; margin-bottom:10px; }
 
-/* ══════════════════════════════════════════════════════
-   MOBILE RESPONSIVE — phones & small tablets
-   Covers: sidebar, layout, typography, cards, inputs,
-   buttons, camera widgets, tables, columns
-══════════════════════════════════════════════════════ */
-
-@media (max-width: 768px) {
-
-    /* ── Sidebar: hide off-screen, slide in on toggle ── */
-    section[data-testid="stSidebar"] {
-        min-width: 0 !important;
-        max-width: 82vw !important;
-        width: 82vw !important;
-        position: fixed !important;
-        z-index: 9999 !important;
-        top: 0 !important;
-        left: 0 !important;
-        height: 100vh !important;
-        transform: translateX(-100%) !important;
-        transition: transform 0.28s cubic-bezier(.4,0,.2,1) !important;
-        box-shadow: 4px 0 32px rgba(0,0,0,0.55), 0 0 40px rgba(0,200,255,0.08) !important;
-        overflow-y: auto !important;
-    }
-    section[data-testid="stSidebar"][aria-expanded="true"] {
-        transform: translateX(0) !important;
-    }
-
-    /* ── Hamburger button ── */
-    button[data-testid="stSidebarCollapseButton"],
-    button[data-testid="stSidebarCollapsedControl"] {
-        display: flex !important;
-        position: fixed !important;
-        top: 10px !important;
-        left: 10px !important;
-        z-index: 10000 !important;
-        background: linear-gradient(135deg, rgba(0,175,215,0.30), rgba(0,100,150,0.20)) !important;
-        border: 1px solid var(--b-mid) !important;
-        border-radius: 10px !important;
-        width: 44px !important;
-        height: 44px !important;
-        align-items: center !important;
-        justify-content: center !important;
-        box-shadow: 0 2px 16px rgba(0,0,0,0.45), var(--glow-c) !important;
-        cursor: pointer !important;
-        color: var(--cyan) !important;
-    }
-
-    /* ── Main content: full width, pad top for hamburger ── */
-    [data-testid="stMain"],
-    [data-testid="stAppViewContainer"] > section:last-child {
-        margin-left: 0 !important;
-        padding-left: 8px !important;
-        padding-right: 8px !important;
-        padding-top: 58px !important;
-        width: 100vw !important;
-        max-width: 100vw !important;
-    }
-    [data-testid="stMainBlockContainer"],
-    [data-testid="block-container"] {
-        padding: 6px 8px !important;
-        max-width: 100vw !important;
-    }
-
-    /* ── Typography ── */
-    h1, h1 * {
-        font-size: clamp(0.92rem, 4.5vw, 1.15rem) !important;
-        letter-spacing: 0.06em !important;
-        line-height: 1.3 !important;
-    }
-    h2, h2 * { font-size: clamp(0.85rem, 3.8vw, 1rem) !important; }
-    h3, h3 * { font-size: clamp(0.80rem, 3.2vw, 0.92rem) !important; }
-    p, li, span, label, div { font-size: 0.82rem !important; }
-
-    /* ── Metric cards ── */
-    [data-testid="stMetric"] {
-        padding: 11px 13px !important;
-        border-radius: 11px !important;
-    }
-    [data-testid="stMetricValue"] > div,
-    [data-testid="stMetricValue"] > div > div {
-        font-size: clamp(1.2rem, 5.5vw, 1.6rem) !important;
-    }
-    [data-testid="stMetricLabel"] > div { font-size: 0.60rem !important; }
-
-    /* ── Columns: wrap to 2-column on mobile ── */
-    [data-testid="stHorizontalBlock"] {
-        flex-wrap: wrap !important;
-        gap: 8px !important;
-    }
-    [data-testid="stHorizontalBlock"] > [data-testid="stVerticalBlockBorderWrapper"] {
-        min-width: calc(50% - 6px) !important;
-        flex: 1 1 calc(50% - 6px) !important;
-    }
-
-    /* ── Section / dashboard cards ── */
-    .section-card {
-        padding: 12px 14px !important;
-        border-radius: 10px !important;
-        margin-bottom: 8px !important;
-    }
-    .section-card h3 { font-size: 0.82rem !important; }
-    .section-card p  { font-size: 0.74rem !important; }
-    .cta-card { padding: 18px 12px !important; }
-    .cta-card-title { font-size: 0.90rem !important; }
-    .cta-card-sub   { font-size: 0.78rem !important; }
-
-    /* ── Vital values ── */
-    .vital-value { font-size: 1.5rem !important; }
-    .vital-unit  { font-size: 0.65rem !important; }
-    .vital-label { font-size: 0.62rem !important; }
-
-    /* ── Patient cards ── */
-    .patient-card { padding: 11px 14px !important; margin-bottom: 5px !important; }
-    .patient-card-name { font-size: 0.90rem !important; }
-    .patient-card-meta { font-size: 0.66rem !important; }
-    .patient-card-id   { font-size: 0.70rem !important; }
-
-    /* ── Flow steps ── */
-    .flow-steps { flex-wrap: nowrap !important; overflow-x: auto !important; padding-bottom: 4px !important; }
-    .flow-step  { padding: 7px 10px !important; font-size: 0.65rem !important; flex-shrink: 0 !important; }
-    .flow-step-num { width: 20px !important; height: 20px !important; font-size: 0.62rem !important; }
-
-    /* ── Buttons: full width, 44px min tap target ── */
-    .stButton > button {
-        width: 100% !important;
-        padding: 0.65rem 1rem !important;
-        font-size: 0.78rem !important;
-        min-height: 44px !important;
-        border-radius: 9px !important;
-        letter-spacing: 0.08em !important;
-    }
-
-    /* ── Inputs: 16px prevents iOS auto-zoom on focus ── */
-    [data-testid="stTextInput"] input,
-    [data-testid="stNumberInput"] input,
-    [data-testid="stTextAreaInput"] textarea {
-        font-size: 16px !important;
-        min-height: 44px !important;
-        padding: 10px 12px !important;
-    }
-    [data-testid="stSelectbox"] > div > div,
-    [data-testid="stSelectbox"] > div > div > div {
-        font-size: 16px !important;
-        min-height: 44px !important;
-    }
-
-    /* ── Tables: horizontal scroll ── */
-    [data-testid="stDataFrame"],
-    [data-testid="stDataFrame"] > div {
-        overflow-x: auto !important;
-        max-width: 100vw !important;
-        display: block !important;
-    }
-    [data-testid="stDataFrame"] td { font-size: 0.75rem !important; padding: 6px 8px !important; max-width: 160px !important; }
-    [data-testid="stDataFrame"] th { font-size: 0.65rem !important; padding: 6px 8px !important; }
-
-    /* ── iframes (camera/BP widget): full width ── */
-    iframe { width: 100% !important; max-width: 100% !important; }
-
-    /* ── Page header ── */
-    .page-header { padding-bottom: 10px !important; margin-bottom: 14px !important; gap: 8px !important; }
-
-    /* ── Breadcrumb ── */
-    .breadcrumb { font-size: 0.62rem !important; padding: 5px 10px !important; gap: 5px !important; flex-wrap: wrap !important; }
-
-    /* ── Sub-label ── */
-    .sub-label { font-size: 0.62rem !important; letter-spacing: 0.12em !important; }
-
-    /* ── Expander ── */
-    [data-testid="stExpander"] summary,
-    [data-testid="stExpander"] summary * { font-size: 0.78rem !important; padding: 10px 12px !important; }
-
-    /* ── Tabs ── */
-    [data-testid="stTabs"] [role="tab"] { font-size: 0.72rem !important; padding: 7px 9px !important; letter-spacing: 0.05em !important; }
-
-    /* ── Alerts ── */
-    div[data-testid="stSuccess"],
-    div[data-testid="stWarning"],
-    div[data-testid="stError"],
-    div[data-testid="stInfo"] { padding: 9px 12px !important; font-size: 0.78rem !important; }
-
-    /* ── Alert banner ── */
-    .alert-banner { padding: 12px 14px !important; }
-    .alert-banner-title { font-size: 0.76rem !important; }
-    .alert-row { font-size: 0.74rem !important; gap: 6px !important; }
-
-    /* ── Sidebar decorations: hide to save space ── */
-    .sidebar-waves { display: none !important; }
-
-    /* ── Sidebar nav: bigger tap targets ── */
-    [data-testid="stSidebar"] [data-testid="stRadio"] label {
-        padding: 6px 4px !important;
-        min-height: 40px !important;
-        display: flex !important;
-        align-items: center !important;
-    }
-    [data-testid="stSidebar"] [data-testid="stRadio"] label p { font-size: 0.80rem !important; }
-
-    /* ── Stat rows ── */
-    .stat-row-label { font-size: 0.65rem !important; }
-    .stat-row-value { font-size: 0.78rem !important; }
-
-    /* ── Timeline card ── */
-    .timeline-card { padding: 12px 14px !important; }
-    .timeline-card-title { font-size: 0.73rem !important; }
-
-    /* ── Badges ── */
-    .badge, .alert-badge { font-size: 0.60rem !important; padding: 2px 7px !important; }
-
-    /* ── Thinner scrollbar on mobile ── */
-    ::-webkit-scrollbar { width: 3px; height: 3px; }
-
-    /* ── No outer horizontal scroll ── */
-    body, .stApp { overflow-x: hidden !important; }
+@media (max-width:768px) {
+    h1 { font-size:1rem !important; }
+    [data-testid="stMetricValue"] > div { font-size:1.3rem !important; }
+    .section-card { padding:14px 16px; }
+    .cta-card { padding:22px 14px; }
+    .vital-value { font-size:1.5rem; }
+    .flow-step { padding:8px 10px; font-size:0.68rem; }
 }
-
-/* ── Extra-small phones ≤ 400px ── */
-@media (max-width: 400px) {
-
-    h1, h1 * { font-size: 0.88rem !important; }
-
-    /* Single-column layout */
-    [data-testid="stHorizontalBlock"] > [data-testid="stVerticalBlockBorderWrapper"] {
-        min-width: 100% !important;
-        flex: 1 1 100% !important;
-    }
-
-    [data-testid="stMetricValue"] > div,
-    [data-testid="stMetricValue"] > div > div { font-size: 1.15rem !important; }
-
-    .vital-value { font-size: 1.25rem !important; }
-
-    .stButton > button { font-size: 0.72rem !important; padding: 0.55rem 0.8rem !important; }
-
-    [data-testid="stTabs"] [role="tab"] { font-size: 0.65rem !important; padding: 6px 7px !important; }
-
-    .section-card { padding: 10px 11px !important; }
-    .patient-card { padding: 9px 11px !important; }
-    .breadcrumb   { font-size: 0.58rem !important; }
+@media (max-width:480px) {
+    [data-testid="stMetric"] { padding:12px 14px !important; }
+    .section-card { padding:12px; }
 }
 
 /* ══════════════════════════════════════════════════════
@@ -825,40 +597,162 @@ label {
 .stSelectbox, .stTextInput, .stNumberInput {
     color: #000 !important;
 }
+
 /* ══════════════════════════════════════════════════════
-   TARGETED FIXES — content overlay & card overflow
+   MOBILE RESPONSIVE — phones & tablets (≤ 768px)
+   Desktop is completely untouched.
 ══════════════════════════════════════════════════════ */
 
-/* Kill the white/light content overlay Streamlit adds */
-[data-testid="stMainBlockContainer"],
-[data-testid="block-container"],
-[data-testid="stMain"] > div,
-section[data-testid="stMain"],
-.main > div,
-div[class*="block-container"] {
-    background: transparent !important;
-    background-color: transparent !important;
+@media (max-width: 768px) {
+
+    /* ── Sidebar: hide off-screen by default ── */
+    section[data-testid="stSidebar"] {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        height: 100vh !important;
+        z-index: 9999 !important;
+        min-width: 0 !important;
+        max-width: 80vw !important;
+        width: 80vw !important;
+        transform: translateX(-100%) !important;
+        transition: transform 0.28s cubic-bezier(.4,0,.2,1) !important;
+        box-shadow: 4px 0 32px rgba(0,0,0,0.55) !important;
+        overflow-y: auto !important;
+    }
+
+    /* Slide in when expanded */
+    section[data-testid="stSidebar"][aria-expanded="true"] {
+        transform: translateX(0) !important;
+    }
+
+    /* ── Hamburger button: visible & tappable ── */
+    button[data-testid="stSidebarCollapseButton"],
+    button[data-testid="stSidebarCollapsedControl"] {
+        display: flex !important;
+        position: fixed !important;
+        top: 10px !important;
+        left: 10px !important;
+        z-index: 10000 !important;
+        width: 44px !important;
+        height: 44px !important;
+        align-items: center !important;
+        justify-content: center !important;
+        background: rgba(0, 175, 215, 0.25) !important;
+        border: 1px solid rgba(0, 200, 255, 0.40) !important;
+        border-radius: 10px !important;
+        box-shadow: 0 2px 16px rgba(0,0,0,0.45) !important;
+        cursor: pointer !important;
+    }
+
+    button[data-testid="stSidebarCollapseButton"] svg,
+    button[data-testid="stSidebarCollapsedControl"] svg {
+        color: var(--cyan) !important;
+        fill: var(--cyan) !important;
+    }
+
+    /* ── Main content: full width, pad top for hamburger ── */
+    [data-testid="stMain"],
+    [data-testid="stAppViewContainer"] > section:last-child {
+        margin-left: 0 !important;
+        padding-left: 8px !important;
+        padding-right: 8px !important;
+        padding-top: 62px !important;
+        width: 100vw !important;
+        max-width: 100vw !important;
+    }
+
+    [data-testid="stMainBlockContainer"],
+    [data-testid="block-container"] {
+        padding: 6px 8px !important;
+        max-width: 100vw !important;
+    }
+
+    /* No horizontal scroll */
+    body, .stApp {
+        overflow-x: hidden !important;
+    }
+
+    /* ── Typography scale down ── */
+    h1, h1 * { font-size: clamp(0.92rem, 4.5vw, 1.15rem) !important; }
+    h2, h2 * { font-size: clamp(0.85rem, 3.8vw, 1rem) !important; }
+    h3, h3 * { font-size: clamp(0.80rem, 3.2vw, 0.92rem) !important; }
+
+    /* ── Metric cards ── */
+    [data-testid="stMetric"] {
+        padding: 11px 13px !important;
+        border-radius: 11px !important;
+    }
+    [data-testid="stMetricValue"] > div,
+    [data-testid="stMetricValue"] > div > div {
+        font-size: clamp(1.2rem, 5.5vw, 1.6rem) !important;
+    }
+
+    /* ── Columns: wrap to 2-col ── */
+    [data-testid="stHorizontalBlock"] {
+        flex-wrap: wrap !important;
+        gap: 8px !important;
+    }
+    [data-testid="stHorizontalBlock"] > [data-testid="stVerticalBlockBorderWrapper"] {
+        min-width: calc(50% - 6px) !important;
+        flex: 1 1 calc(50% - 6px) !important;
+    }
+
+    /* ── Buttons: full width, 44px tap target ── */
+    .stButton > button {
+        width: 100% !important;
+        min-height: 44px !important;
+        font-size: 0.78rem !important;
+        padding: 0.65rem 1rem !important;
+    }
+
+    /* ── Inputs: 16px stops iOS auto-zoom ── */
+    [data-testid="stTextInput"] input,
+    [data-testid="stNumberInput"] input,
+    [data-testid="stTextAreaInput"] textarea {
+        font-size: 16px !important;
+        min-height: 44px !important;
+    }
+    [data-testid="stSelectbox"] > div > div {
+        font-size: 16px !important;
+        min-height: 44px !important;
+    }
+
+    /* ── Tables: horizontal scroll ── */
+    [data-testid="stDataFrame"],
+    [data-testid="stDataFrame"] > div {
+        overflow-x: auto !important;
+        max-width: 100vw !important;
+        display: block !important;
+    }
+
+    /* ── iframes (camera widgets) ── */
+    iframe {
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+
+    /* ── Cards ── */
+    .section-card { padding: 12px 14px !important; }
+    .patient-card { padding: 11px 14px !important; }
+    .cta-card     { padding: 18px 12px !important; }
+
+    /* ── Tabs ── */
+    [data-testid="stTabs"] [role="tab"] {
+        font-size: 0.72rem !important;
+        padding: 7px 9px !important;
+    }
+
+    /* ── Thinner scrollbar ── */
+    ::-webkit-scrollbar { width: 3px; height: 3px; }
 }
 
-/* Metric card value overflow fix — prevent text clipping */
-[data-testid="stMetricValue"] > div,
-[data-testid="stMetricValue"] > div > div {
-    white-space: nowrap !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-    font-size: clamp(1.1rem, 2.2vw, 2.0rem) !important;
-}
-
-/* Metric card label overflow */
-[data-testid="stMetricLabel"] > div,
-[data-testid="stMetricLabel"] p {
-    white-space: nowrap !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-}
-
-/* Fix top black gap */
-[data-testid="stAppViewContainer"] {
-    background: transparent !important;
-    padding-top: 0 !important;
+/* ── Extra-small phones ≤ 400px: single column ── */
+@media (max-width: 400px) {
+    [data-testid="stHorizontalBlock"] > [data-testid="stVerticalBlockBorderWrapper"] {
+        min-width: 100% !important;
+        flex: 1 1 100% !important;
+    }
+    h1, h1 * { font-size: 0.88rem !important; }
+    [data-testid="stMetricValue"] > div { font-size: 1.15rem !important; }
 }
