@@ -654,6 +654,29 @@ div.block-container, div.stMainBlockContainer {{
   scrollbar-width: thin !important;
   scrollbar-color: rgba(0,180,220,0.5) rgba(4,16,60,0.4) !important;
 }}
+@media (max-width: 900px) {{
+  section[data-testid="stMain"] {{
+    justify-content: center !important;
+    align-items: flex-start !important;
+    padding-right: 0 !important;
+    padding-left: 0 !important;
+    padding-top: 16px !important;
+  }}
+  div.block-container, div.stMainBlockContainer {{
+    position: relative !important;
+    top: auto !important;
+    right: auto !important;
+    left: auto !important;
+    width: calc(100vw - 24px) !important;
+    max-width: 480px !important;
+    min-width: 0 !important;
+    margin: 0 auto !important;
+    padding: 28px 20px 24px 20px !important;
+    max-height: none !important;
+    overflow-y: visible !important;
+    border-radius: 18px !important;
+  }}
+}}
 div.block-container::-webkit-scrollbar, div.stMainBlockContainer::-webkit-scrollbar {{
   width: 8px !important;
 }}
