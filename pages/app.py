@@ -267,6 +267,20 @@ def _load_css():
         "backdrop-filter:blur(12px)!important;}"
         "[data-testid='stExpander'] summary *{color:#0a2540!important;font-weight:600!important;}"
 
+        # ── Fix overlapping ghost texts ──
+        # 1) ".arr▶right" ghost - SVG title/text nodes made visible by broad span rule
+        "[data-testid='stExpander'] summary svg text,"
+        "[data-testid='stExpander'] summary svg title,"
+        "[data-testid='stExpander'] summary svg desc"
+        "{display:none!important;font-size:0!important;}"
+        # 2) "uploadupload" - file uploader button hidden aria span made visible
+        "[data-testid='stFileUploaderDropzone'] button span+span,"
+        "[data-testid='stFileUploaderDropzone'] button [aria-hidden='true']"
+        "{display:none!important;}"
+        # 3) Any leaking ::before content on expander summary
+        "[data-testid='stExpander'] summary::before"
+        "{content:none!important;display:none!important;}"
+
         # ── Misc ──
         "hr{border-color:rgba(100,160,220,0.18)!important;}"
         "::-webkit-scrollbar{width:6px;}"
