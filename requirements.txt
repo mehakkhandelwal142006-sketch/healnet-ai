@@ -3,3 +3,7 @@ pandas
 numpy
 influxdb-client
 streamlit-autorefresh
+opencv-contrib-python-headless
+mediapipe
+plotly
+ 
