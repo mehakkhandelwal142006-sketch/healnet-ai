@@ -6,7 +6,8 @@ import pandas as pd
 import os
 import sys, os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))  # project root
-sys.path.append(os.path.abspath(os.path.dirname(__file__)))                       # pages/ folder → finds utils/
+sys.path.append(os.path.abspath(os.path.dirname(__file__)))                       # pages/ folder
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "utils")))  # pages/utils/ → finds healnet_ai.py
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
@@ -67,6 +68,9 @@ def _load_css():
         "[data-testid='stHeader'],[data-testid='stDecoration'],"
         "[data-testid='stToolbar'],header[data-testid='stHeader']"
         "{display:none!important;height:0!important;visibility:hidden!important;}"
+
+        # ── Hide auto-generated Streamlit pages nav (camera bp, healnet ai, etc.) ──
+        "[data-testid='stSidebarNav']{display:none!important;}"
 
         # ── Main background: the uploaded image, fixed and covering ──
         f"html,body,.stApp,"
