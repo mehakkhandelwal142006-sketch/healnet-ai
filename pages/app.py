@@ -6,8 +6,7 @@ import pandas as pd
 import os
 import sys, os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))  # project root
-sys.path.append(os.path.abspath(os.path.dirname(__file__)))                       # pages/ folder
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "utils")))  # pages/utils/ → finds healnet_ai.py
+sys.path.append(os.path.abspath(os.path.dirname(__file__)))                       # pages/ folder → finds utils/
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
@@ -16,7 +15,13 @@ from vital_ranges import (
     classify_blood_sugar, classify_temperature,
     classify_respiratory_rate, classify_bmi,
 )
-from influx_plugin import get_vitals, write_vitals
+try:
+    from influx_plugin import get_vitals, write_vitals
+    INFLUX_OK = True
+except Exception:
+    INFLUX_OK = False
+    def get_vitals(patient_id): return {}
+    def write_vitals(patient_id): pass
 from patient_db import (
     create_table,
     add_patient,
@@ -28,7 +33,6 @@ from patient_db import (
     search_patients  
 )
 from realtime_engine import RealTimeEngine
-from influx_plugin import write_vitals
 from healnet_ai import HealNetAI
 try:
     from pupil_detection import render_pupil_detection_page
@@ -68,9 +72,6 @@ def _load_css():
         "[data-testid='stHeader'],[data-testid='stDecoration'],"
         "[data-testid='stToolbar'],header[data-testid='stHeader']"
         "{display:none!important;height:0!important;visibility:hidden!important;}"
-
-        # ── Hide auto-generated Streamlit pages nav (camera bp, healnet ai, etc.) ──
-        "[data-testid='stSidebarNav']{display:none!important;}"
 
         # ── Main background: the uploaded image, fixed and covering ──
         f"html,body,.stApp,"
@@ -164,35 +165,8 @@ def _load_css():
         "font-weight:700!important;text-shadow:none!important;}"
         "h2,h2*{font-family:'Outfit',sans-serif!important;color:#0a2540!important;font-weight:600!important;}"
         "h3,h3*{font-family:'Outfit',sans-serif!important;color:#0a2540!important;font-weight:600!important;text-shadow:none!important;}"
-        # Scoped span — only target visible Streamlit content areas, NOT all spans globally
-        "p,li,label{color:#1e2d3d!important;font-family:'Nunito',sans-serif!important;}"
-        ".stMarkdown span,[data-testid='stMarkdownContainer'] span,"
-        ".stText span,[data-testid='stText'] span,"
-        ".stAlert span,[data-testid='stAlert'] span"
-        "{color:#1e2d3d!important;font-family:'Nunito',sans-serif!important;}"
+        "p,li,span,label{color:#1e2d3d!important;font-family:'Nunito',sans-serif!important;}"
         "strong{color:#0055bb!important;font-weight:800!important;}"
-
-        # ── Fix ALL overlapping/ghost text from internal Streamlit hidden spans ──
-        # File uploader: hides the duplicate 'upload' aria span → fixes 'uploadupload'
-        "[data-testid='stFileUploaderDropzone'] button span[data-testid],"
-        "[data-testid='stFileUploaderDropzone'] button span+span,"
-        "[data-testid='stFileUploaderDropzone'] button [aria-hidden],"
-        "[data-testid='stFileUploaderDropzone'] [aria-hidden]"
-        "{display:none!important;visibility:hidden!important;font-size:0!important;}"
-        # Expander arrow: hides SVG text/title nodes → fixes '.arr□▶right' ghost
-        "[data-testid='stExpander'] summary svg text,"
-        "[data-testid='stExpander'] summary svg title,"
-        "[data-testid='stExpander'] summary svg desc,"
-        "[data-testid='stExpander'] summary [aria-hidden],"
-        "[data-testid='stExpander'] summary span[style*='display:none'],"
-        "[data-testid='stExpander'] summary::before"
-        "{display:none!important;visibility:hidden!important;"
-        "font-size:0!important;content:none!important;}"
-        # Radio / Tab hidden labels
-        "[data-testid='stRadio'] [aria-hidden],"
-        "[data-testid='stTabs'] [aria-hidden],"
-        "button [aria-hidden]"
-        "{display:none!important;font-size:0!important;}"
 
         # ── Metric cards ──
         "[data-testid='stMetric']"
@@ -1517,11 +1491,14 @@ elif page == "Health Monitoring":
 
     # ── Live monitoring ───────────────────────────────────────────────
     from realtime_engine import RealTimeEngine
-    from influx_plugin import write_vitals
     import time
 
     # Write fresh simulated data then fetch
-    write_vitals(patient_id)
+    # Wrapped in try/except — InfluxDB may be unavailable on cloud deployment
+    try:
+        write_vitals(patient_id)
+    except Exception as _influx_err:
+        st.warning(f"⚠️ Live data write unavailable (InfluxDB): {_influx_err}", icon="⚠️")
     engine = RealTimeEngine(mode="simulated")
     vitals = engine.fetch(patient_id)
 
