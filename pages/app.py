@@ -6,7 +6,8 @@ import pandas as pd
 import os
 import sys, os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))  # project root
-sys.path.append(os.path.abspath(os.path.dirname(__file__)))                       # pages/ folder → finds utils/
+sys.path.append(os.path.abspath(os.path.dirname(__file__)))                       # pages/ folder
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "utils")))  # pages/utils/ → finds healnet_ai.py
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
@@ -33,6 +34,7 @@ from patient_db import (
     search_patients  
 )
 from realtime_engine import RealTimeEngine
+from influx_plugin import write_vitals
 from healnet_ai import HealNetAI
 try:
     from pupil_detection import render_pupil_detection_page
@@ -72,6 +74,9 @@ def _load_css():
         "[data-testid='stHeader'],[data-testid='stDecoration'],"
         "[data-testid='stToolbar'],header[data-testid='stHeader']"
         "{display:none!important;height:0!important;visibility:hidden!important;}"
+
+        # ── Hide auto-generated Streamlit pages nav (camera bp, healnet ai, etc.) ──
+        "[data-testid='stSidebarNav']{display:none!important;}"
 
         # ── Main background: the uploaded image, fixed and covering ──
         f"html,body,.stApp,"
@@ -165,8 +170,35 @@ def _load_css():
         "font-weight:700!important;text-shadow:none!important;}"
         "h2,h2*{font-family:'Outfit',sans-serif!important;color:#0a2540!important;font-weight:600!important;}"
         "h3,h3*{font-family:'Outfit',sans-serif!important;color:#0a2540!important;font-weight:600!important;text-shadow:none!important;}"
-        "p,li,span,label{color:#1e2d3d!important;font-family:'Nunito',sans-serif!important;}"
+        # Scoped span — only target visible Streamlit content areas, NOT all spans globally
+        "p,li,label{color:#1e2d3d!important;font-family:'Nunito',sans-serif!important;}"
+        ".stMarkdown span,[data-testid='stMarkdownContainer'] span,"
+        ".stText span,[data-testid='stText'] span,"
+        ".stAlert span,[data-testid='stAlert'] span"
+        "{color:#1e2d3d!important;font-family:'Nunito',sans-serif!important;}"
         "strong{color:#0055bb!important;font-weight:800!important;}"
+
+        # ── Fix ALL overlapping/ghost text from internal Streamlit hidden spans ──
+        # File uploader: hides the duplicate 'upload' aria span → fixes 'uploadupload'
+        "[data-testid='stFileUploaderDropzone'] button span[data-testid],"
+        "[data-testid='stFileUploaderDropzone'] button span+span,"
+        "[data-testid='stFileUploaderDropzone'] button [aria-hidden],"
+        "[data-testid='stFileUploaderDropzone'] [aria-hidden]"
+        "{display:none!important;visibility:hidden!important;font-size:0!important;}"
+        # Expander arrow: hides SVG text/title nodes → fixes '.arr□▶right' ghost
+        "[data-testid='stExpander'] summary svg text,"
+        "[data-testid='stExpander'] summary svg title,"
+        "[data-testid='stExpander'] summary svg desc,"
+        "[data-testid='stExpander'] summary [aria-hidden],"
+        "[data-testid='stExpander'] summary span[style*='display:none'],"
+        "[data-testid='stExpander'] summary::before"
+        "{display:none!important;visibility:hidden!important;"
+        "font-size:0!important;content:none!important;}"
+        # Radio / Tab hidden labels
+        "[data-testid='stRadio'] [aria-hidden],"
+        "[data-testid='stTabs'] [aria-hidden],"
+        "button [aria-hidden]"
+        "{display:none!important;font-size:0!important;}"
 
         # ── Metric cards ──
         "[data-testid='stMetric']"
@@ -1493,22 +1525,20 @@ elif page == "Health Monitoring":
     from realtime_engine import RealTimeEngine
     import time
 
-    # Get latest vitals (from DB or simulation), then persist them
+    # Get latest vitals then write with correct signature
     try:
-        _latest_vitals = get_vitals(patient_id)
-        # Map app field names → influx_plugin field names
-        _vitals_to_write = {
-            "heart_rate":       _latest_vitals.get("heart_rate"),
-            "spo2":             _latest_vitals.get("spo2"),
-            "systolic_bp":      _latest_vitals.get("systolic_bp") or _latest_vitals.get("systolic"),
-            "diastolic_bp":     _latest_vitals.get("diastolic_bp") or _latest_vitals.get("diastolic"),
-            "temperature":      _latest_vitals.get("temperature"),
-            "blood_sugar":      _latest_vitals.get("blood_sugar"),
-            "respiratory_rate": _latest_vitals.get("respiratory_rate"),
-            "bmi":              _latest_vitals.get("bmi"),
-        }
-        write_vitals(patient_id, vitals=_vitals_to_write, source="manual")
-    except Exception as _e:
+        _latest = get_vitals(patient_id)
+        write_vitals(patient_id, vitals={
+            "heart_rate":       _latest.get("heart_rate"),
+            "spo2":             _latest.get("spo2"),
+            "systolic_bp":      _latest.get("systolic_bp") or _latest.get("systolic"),
+            "diastolic_bp":     _latest.get("diastolic_bp") or _latest.get("diastolic"),
+            "temperature":      _latest.get("temperature"),
+            "blood_sugar":      _latest.get("blood_sugar"),
+            "respiratory_rate": _latest.get("respiratory_rate"),
+            "bmi":              _latest.get("bmi"),
+        }, source="manual")
+    except Exception:
         pass  # Non-critical — monitoring continues even if write fails
     engine = RealTimeEngine(mode="simulated")
     vitals = engine.fetch(patient_id)
