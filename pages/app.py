@@ -164,8 +164,35 @@ def _load_css():
         "font-weight:700!important;text-shadow:none!important;}"
         "h2,h2*{font-family:'Outfit',sans-serif!important;color:#0a2540!important;font-weight:600!important;}"
         "h3,h3*{font-family:'Outfit',sans-serif!important;color:#0a2540!important;font-weight:600!important;text-shadow:none!important;}"
-        "p,li,span,label{color:#1e2d3d!important;font-family:'Nunito',sans-serif!important;}"
+        # Scoped span — only target visible Streamlit content areas, NOT all spans globally
+        "p,li,label{color:#1e2d3d!important;font-family:'Nunito',sans-serif!important;}"
+        ".stMarkdown span,[data-testid='stMarkdownContainer'] span,"
+        ".stText span,[data-testid='stText'] span,"
+        ".stAlert span,[data-testid='stAlert'] span"
+        "{color:#1e2d3d!important;font-family:'Nunito',sans-serif!important;}"
         "strong{color:#0055bb!important;font-weight:800!important;}"
+
+        # ── Fix ALL overlapping/ghost text from internal Streamlit hidden spans ──
+        # File uploader: hides the duplicate 'upload' aria span → fixes 'uploadupload'
+        "[data-testid='stFileUploaderDropzone'] button span[data-testid],"
+        "[data-testid='stFileUploaderDropzone'] button span+span,"
+        "[data-testid='stFileUploaderDropzone'] button [aria-hidden],"
+        "[data-testid='stFileUploaderDropzone'] [aria-hidden]"
+        "{display:none!important;visibility:hidden!important;font-size:0!important;}"
+        # Expander arrow: hides SVG text/title nodes → fixes '.arr□▶right' ghost
+        "[data-testid='stExpander'] summary svg text,"
+        "[data-testid='stExpander'] summary svg title,"
+        "[data-testid='stExpander'] summary svg desc,"
+        "[data-testid='stExpander'] summary [aria-hidden],"
+        "[data-testid='stExpander'] summary span[style*='display:none'],"
+        "[data-testid='stExpander'] summary::before"
+        "{display:none!important;visibility:hidden!important;"
+        "font-size:0!important;content:none!important;}"
+        # Radio / Tab hidden labels
+        "[data-testid='stRadio'] [aria-hidden],"
+        "[data-testid='stTabs'] [aria-hidden],"
+        "button [aria-hidden]"
+        "{display:none!important;font-size:0!important;}"
 
         # ── Metric cards ──
         "[data-testid='stMetric']"
@@ -266,20 +293,6 @@ def _load_css():
         "border:1px solid rgba(255,255,255,0.80)!important;border-radius:14px!important;"
         "backdrop-filter:blur(12px)!important;}"
         "[data-testid='stExpander'] summary *{color:#0a2540!important;font-weight:600!important;}"
-
-        # ── Fix overlapping ghost texts ──
-        # 1) ".arr▶right" ghost - SVG title/text nodes made visible by broad span rule
-        "[data-testid='stExpander'] summary svg text,"
-        "[data-testid='stExpander'] summary svg title,"
-        "[data-testid='stExpander'] summary svg desc"
-        "{display:none!important;font-size:0!important;}"
-        # 2) "uploadupload" - file uploader button hidden aria span made visible
-        "[data-testid='stFileUploaderDropzone'] button span+span,"
-        "[data-testid='stFileUploaderDropzone'] button [aria-hidden='true']"
-        "{display:none!important;}"
-        # 3) Any leaking ::before content on expander summary
-        "[data-testid='stExpander'] summary::before"
-        "{content:none!important;display:none!important;}"
 
         # ── Misc ──
         "hr{border-color:rgba(100,160,220,0.18)!important;}"
