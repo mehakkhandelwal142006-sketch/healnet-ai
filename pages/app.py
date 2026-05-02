@@ -21,7 +21,7 @@ try:
 except Exception:
     INFLUX_OK = False
     def get_vitals(patient_id): return {}
-    def write_vitals(patient_id): pass
+    def write_vitals(patient_id, vitals=None, source="manual", device_id=None): return False
 from patient_db import (
     create_table,
     add_patient,
@@ -1493,12 +1493,23 @@ elif page == "Health Monitoring":
     from realtime_engine import RealTimeEngine
     import time
 
-    # Write fresh simulated data then fetch
-    # Wrapped in try/except — InfluxDB may be unavailable on cloud deployment
+    # Get latest vitals (from DB or simulation), then persist them
     try:
-        write_vitals(patient_id)
-    except Exception as _influx_err:
-        st.warning(f"⚠️ Live data write unavailable (InfluxDB): {_influx_err}", icon="⚠️")
+        _latest_vitals = get_vitals(patient_id)
+        # Map app field names → influx_plugin field names
+        _vitals_to_write = {
+            "heart_rate":       _latest_vitals.get("heart_rate"),
+            "spo2":             _latest_vitals.get("spo2"),
+            "systolic_bp":      _latest_vitals.get("systolic_bp") or _latest_vitals.get("systolic"),
+            "diastolic_bp":     _latest_vitals.get("diastolic_bp") or _latest_vitals.get("diastolic"),
+            "temperature":      _latest_vitals.get("temperature"),
+            "blood_sugar":      _latest_vitals.get("blood_sugar"),
+            "respiratory_rate": _latest_vitals.get("respiratory_rate"),
+            "bmi":              _latest_vitals.get("bmi"),
+        }
+        write_vitals(patient_id, vitals=_vitals_to_write, source="manual")
+    except Exception as _e:
+        pass  # Non-critical — monitoring continues even if write fails
     engine = RealTimeEngine(mode="simulated")
     vitals = engine.fetch(patient_id)
 
