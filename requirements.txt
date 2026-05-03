@@ -1,4 +1,5 @@
 # HealNet AI — Python Dependencies
+# Python 3.11 required (see runtime.txt)
 
 # ── Core framework ────────────────────────────────────────────────────────────
 streamlit>=1.35.0
@@ -20,7 +21,7 @@ python-dotenv>=1.0.0
 # ── AI / ML ───────────────────────────────────────────────────────────────────
 openai>=1.0.0
 
-# ── Computer vision ───────────────────────────────────────────────────────────
+# ── Computer vision — requires Python 3.11 (see runtime.txt) ─────────────────
 opencv-contrib-python-headless==4.8.1.78
 mediapipe==0.10.9
 
