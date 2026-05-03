@@ -1,5 +1,4 @@
 # HealNet AI — Python Dependencies
-# Install with: pip install -r requirements.txt
 
 # ── Core framework ────────────────────────────────────────────────────────────
 streamlit>=1.35.0
@@ -12,7 +11,7 @@ influxdb-client
 
 # ── Data processing ───────────────────────────────────────────────────────────
 pandas>=2.0.0
-numpy>=1.24.0
+numpy>=1.24.0,<2.0.0
 
 # ── Security ──────────────────────────────────────────────────────────────────
 bcrypt>=4.0.0
@@ -21,9 +20,8 @@ python-dotenv>=1.0.0
 # ── AI / ML ───────────────────────────────────────────────────────────────────
 openai>=1.0.0
 
-# ── Computer vision (camera vitals & pupil detection) ────────────────────────
-opencv-contrib-python-headless>=4.8.0
-# Pinned to last version with mp.solutions.face_mesh API intact
+# ── Computer vision ───────────────────────────────────────────────────────────
+opencv-contrib-python-headless==4.8.1.78
 mediapipe==0.10.9
 
 # ── HTTP ──────────────────────────────────────────────────────────────────────
