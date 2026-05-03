@@ -11,11 +11,16 @@ Provides:
 
 import streamlit as st
 import sqlite3
-import cv2
-import numpy as np
 import sys, os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+try:
+    import cv2
+    import numpy as np
+    CV2_OK = True
+except ImportError:
+    CV2_OK = False
 
 try:
     from pupil_analysis import (
@@ -175,12 +180,17 @@ def render_pupil_detection_page():
     )
 
     # ── Dependency check ──────────────────────────────────────────────────
+    if not CV2_OK:
+        st.error(
+            "⚠️ OpenCV is not installed. Add to requirements.txt:\n"
+            "```\nopencv-contrib-python-headless==4.8.1.78\n```"
+        )
+        return
     if not ENGINE_OK:
         st.error(
             "⚠️ `pupil_analysis.py` could not be imported. "
             f"Error: `{_IMPORT_ERR}`\n\n"
-            "Install dependencies with:\n"
-            "```\npip install opencv-python mediapipe numpy\n```"
+            "Ensure `pupil_analysis.py` is in the same folder as `app.py`."
         )
         return
 
