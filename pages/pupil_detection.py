@@ -13,14 +13,14 @@ import streamlit as st
 import sqlite3
 import sys, os
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-
 try:
     import cv2
     import numpy as np
     CV2_OK = True
 except ImportError:
     CV2_OK = False
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 try:
     from pupil_analysis import (
@@ -43,7 +43,7 @@ def _db():
     c.row_factory = sqlite3.Row
     return c
 
-def _fetch_pupil_blob(table: str, username: str) -> bytes | None:
+def _fetch_pupil_blob(table: str, username: str):
     con = _db()
     try:
         row = con.execute(
@@ -93,7 +93,7 @@ def _severity_badge(severity: str) -> str:
 
 
 # ── Render single eye result ───────────────────────────────────────────────────
-def _render_result(result: PupilResult, label: str = ""):
+def _render_result(result: "PupilResult", label: str = ""):
     if result.error:
         st.error(f"❌ Detection failed: {result.error}")
         return
@@ -181,16 +181,14 @@ def render_pupil_detection_page():
 
     # ── Dependency check ──────────────────────────────────────────────────
     if not CV2_OK:
-        st.error(
-            "⚠️ OpenCV is not installed. Add to requirements.txt:\n"
-            "```\nopencv-contrib-python-headless==4.8.1.78\n```"
-        )
+        st.error("⚠️ OpenCV not installed. Check requirements.txt.")
         return
     if not ENGINE_OK:
         st.error(
             "⚠️ `pupil_analysis.py` could not be imported. "
             f"Error: `{_IMPORT_ERR}`\n\n"
-            "Ensure `pupil_analysis.py` is in the same folder as `app.py`."
+            "Install dependencies with:\n"
+            "```\npip install opencv-python mediapipe numpy\n```"
         )
         return
 
