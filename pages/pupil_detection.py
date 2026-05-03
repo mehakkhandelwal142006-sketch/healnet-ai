@@ -154,7 +154,7 @@ def _render_result(result: PupilResult, label: str = ""):
             st.markdown(f"- {note}")
 
     # Possible causes
-    if result.possible_causes and result.possible_causes[0] != "No abnormality identified — routine follow-up as needed":
+    if result.possible_causes and not result.possible_causes[0].startswith("No abnormality"):
         with st.expander("🩺 Possible Causes / Differential Diagnosis"):
             for cause in result.possible_causes:
                 st.markdown(f"- {cause}")
@@ -245,7 +245,10 @@ def render_pupil_detection_page():
                 key="pd_left", label_visibility="collapsed"
             )
             if left_up:
-                st.image(left_up, caption="Left eye preview", width=220)
+                left_bytes = left_up.read()   # read once; reuse for both preview & analysis
+                st.image(left_bytes, caption="Left eye preview", width=220)
+            else:
+                left_bytes = None
 
         with c_right:
             st.markdown("**Right Eye**")
@@ -254,12 +257,13 @@ def render_pupil_detection_page():
                 key="pd_right", label_visibility="collapsed"
             )
             if right_up:
-                st.image(right_up, caption="Right eye preview", width=220)
+                right_bytes = right_up.read()  # read once; reuse for both preview & analysis
+                st.image(right_bytes, caption="Right eye preview", width=220)
+            else:
+                right_bytes = None
 
         if left_up or right_up:
             if st.button("🔍 Run Dual-Eye Analysis", type="primary"):
-                left_bytes  = left_up.read()  if left_up  else None
-                right_bytes = right_up.read() if right_up else None
 
                 with st.spinner("Analysing both eyes…"):
                     out = analyze_both_eyes(left_bytes, right_bytes)
