@@ -1,4 +1,5 @@
 # HealNet AI — Python Dependencies
+# IMPORTANT: Set Python 3.11 in Streamlit Cloud Settings
 
 # ── Core framework ────────────────────────────────────────────────────────────
 streamlit>=1.35.0
@@ -11,7 +12,7 @@ influxdb-client
 
 # ── Data processing ───────────────────────────────────────────────────────────
 pandas>=2.0.0
-numpy>=1.24.0
+numpy>=1.24.0,<2.0.0
 
 # ── Security ──────────────────────────────────────────────────────────────────
 bcrypt>=4.0.0
@@ -19,6 +20,10 @@ python-dotenv>=1.0.0
 
 # ── AI / ML ───────────────────────────────────────────────────────────────────
 openai>=1.0.0
+
+# ── Computer vision — needs Python 3.11 ──────────────────────────────────────
+opencv-contrib-python-headless==4.8.1.78
+mediapipe==0.10.9
 
 # ── HTTP ──────────────────────────────────────────────────────────────────────
 requests>=2.31.0
