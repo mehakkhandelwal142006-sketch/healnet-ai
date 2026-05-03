@@ -1652,8 +1652,6 @@ elif page == "Health Monitoring":
     }
 
     # ── 🤖 AI Predictive Insights ─────────────────────────────────────
-    from utils.healnet_ai import HealNetAI
-
     ai = HealNetAI(
         patient_id,
         vitals_map,
