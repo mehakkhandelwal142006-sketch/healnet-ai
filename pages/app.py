@@ -1525,35 +1525,38 @@ elif page == "Health Monitoring":
     from realtime_engine import RealTimeEngine
     import time
 
-    # Get latest vitals then write with correct signature
+    # Call tick() with correct constructor signature: (patient_id, patient_name)
     try:
-        _latest = get_vitals(patient_id)
-        write_vitals(patient_id, vitals={
-            "heart_rate":       _latest.get("heart_rate"),
-            "spo2":             _latest.get("spo2"),
-            "systolic_bp":      _latest.get("systolic_bp") or _latest.get("systolic"),
-            "diastolic_bp":     _latest.get("diastolic_bp") or _latest.get("diastolic"),
-            "temperature":      _latest.get("temperature"),
-            "blood_sugar":      _latest.get("blood_sugar"),
-            "respiratory_rate": _latest.get("respiratory_rate"),
-            "bmi":              _latest.get("bmi"),
-        }, source="manual")
+        engine = RealTimeEngine(patient_id, patient_name)
+        result = engine.tick()
+        _vitals    = result.get("vitals", {})
+        _timestamp = result.get("timestamp", "N/A")
+        _source    = result.get("source", "simulated")
     except Exception:
-        pass  # Non-critical — monitoring continues even if write fails
-    engine = RealTimeEngine(mode="simulated")
-    vitals = engine.fetch(patient_id)
+        import datetime as _dt
+        _vitals    = get_vitals(patient_id)
+        _timestamp = _dt.datetime.now().strftime("%d %b %Y, %I:%M:%S %p")
+        _source    = "simulated"
 
-    if not vitals:
+    # Build data dict — map influx_plugin field names → app field names
+    data = {
+        "systolic":         _vitals.get("systolic_bp",      120),
+        "diastolic":        _vitals.get("diastolic_bp",      80),
+        "heart_rate":       _vitals.get("heart_rate",         72),
+        "spo2":             _vitals.get("spo2",               98),
+        "blood_sugar":      _vitals.get("blood_sugar",        90),
+        "temperature":      _vitals.get("temperature",        98.6),
+        "respiratory_rate": _vitals.get("respiratory_rate",   16),
+        "weight":           _vitals.get("weight",             70),
+        "height":           _vitals.get("height",            170),
+        "bmi":              _vitals.get("bmi",               24.2),
+    }
+
+    if not data:
         st.warning("⚠️ No vitals data received from device.")
         st.stop()
 
-    data = vitals.get("data", {})
-
-    if not data:
-        st.warning("⚠️ Vitals data is empty.")
-        st.stop()
-
-    st.caption(f"🕒 Last Updated: {vitals.get('timestamp', 'N/A')} &nbsp;·&nbsp; 📡 Source: {vitals.get('source', 'Unknown')}")
+    st.caption(f"🕒 Last Updated: {_timestamp} &nbsp;·&nbsp; 📡 Source: {_source}")
 
     # ── Extract values ────────────────────────────────────────────────
     systolic  = data.get("systolic", 0)
