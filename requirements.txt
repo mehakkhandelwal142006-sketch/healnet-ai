@@ -23,7 +23,8 @@ openai>=1.0.0
 
 # ── Computer vision (camera vitals & pupil detection) ────────────────────────
 opencv-contrib-python-headless>=4.8.0
-mediapipe>=0.10.0
+# Pinned to last version with mp.solutions.face_mesh API intact
+mediapipe==0.10.9
 
 # ── HTTP ──────────────────────────────────────────────────────────────────────
 requests>=2.31.0
