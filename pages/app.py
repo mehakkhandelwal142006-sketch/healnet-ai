@@ -34,7 +34,6 @@ from patient_db import (
     search_patients  
 )
 from realtime_engine import RealTimeEngine
-from influx_plugin import write_vitals
 from healnet_ai import HealNetAI
 try:
     from pupil_detection import render_pupil_detection_page
@@ -2002,10 +2001,44 @@ elif page == "Report Analysis":
 elif page == "Pupil Detection":
     breadcrumb(["Dashboard", "Pupil Detection"], "Pupil Detection")
     if PUPIL_OK:
-        render_pupil_detection_page()
+        try:
+            render_pupil_detection_page()
+        except Exception as _pupil_err:
+            st.html("""
+            <div style="background:rgba(0,175,215,0.06);border:1px solid rgba(0,200,255,0.22);
+                        border-left:4px solid #00d8ff;border-radius:12px;
+                        padding:28px 28px;margin:20px 0;text-align:center;">
+              <div style="font-size:2.5rem;margin-bottom:12px;">👁️</div>
+              <div style="font-family:'Rajdhani',sans-serif;font-size:1.1rem;font-weight:700;
+                          color:#00d8ff;text-transform:uppercase;letter-spacing:.10em;
+                          margin-bottom:10px;">Pupil Detection — Temporarily Unavailable</div>
+              <div style="font-size:.85rem;color:#5888aa;line-height:1.7;max-width:420px;margin:0 auto;">
+                The pupil detection module encountered a dependency issue.<br>
+                This is being resolved in the next update.<br><br>
+                <span style="color:#00f5c4;font-weight:600;">
+                  Meanwhile, try Camera Vitals or BP Camera from the sidebar.
+                </span>
+              </div>
+            </div>
+            """)
     else:
-        st.error("pupil_detection.py not found. Place it in the pages/ folder.")
-        st.code("pip install opencv-python mediapipe numpy", language="bash")
+        st.html("""
+        <div style="background:rgba(0,175,215,0.06);border:1px solid rgba(0,200,255,0.22);
+                    border-left:4px solid #00d8ff;border-radius:12px;
+                    padding:28px 28px;margin:20px 0;text-align:center;">
+          <div style="font-size:2.5rem;margin-bottom:12px;">👁️</div>
+          <div style="font-family:'Rajdhani',sans-serif;font-size:1.1rem;font-weight:700;
+                      color:#00d8ff;text-transform:uppercase;letter-spacing:.10em;
+                      margin-bottom:10px;">Pupil Detection — Coming Soon</div>
+          <div style="font-size:.85rem;color:#5888aa;line-height:1.7;max-width:420px;margin:0 auto;">
+            This module uses your device camera and AI to analyse pupil response.<br>
+            It will be available in the next HealNet update.<br><br>
+            <span style="color:#00f5c4;font-weight:600;">
+              Meanwhile, try Camera Vitals or BP Camera from the sidebar.
+            </span>
+          </div>
+        </div>
+        """)
 
 elif page == "Camera Vitals":
     breadcrumb(["Dashboard", "Camera Vitals"], "Camera Vitals")
