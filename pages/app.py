@@ -117,11 +117,10 @@ def _load_css():
         "{display:block!important;visibility:visible!important;opacity:1!important;"
         "background:transparent!important;width:100%!important;}"
 
-        # Hide collapse buttons ONLY on desktop (sidebar is pinned open there)
-        "@media(min-width:769px){"
+        # Hide ALL native Streamlit sidebar collapse/expand buttons everywhere
         "button[data-testid='stSidebarCollapseButton'],"
         "button[data-testid='stSidebarCollapsedControl']"
-        "{display:none!important;}}"
+        "{display:none!important;visibility:hidden!important;pointer-events:none!important;}"
 
         "section[data-testid='stSidebar'] > div:first-child"
         "{width:210px!important;}"
@@ -644,6 +643,93 @@ name = user.get("name") or org.get("name") or "User"
 #  SIDEBAR
 # ─────────────────────────────────────────────────────
 with st.sidebar:
+    # ── Custom << / >> sidebar toggle ──
+    st.markdown("""
+    <style>
+    button[data-testid="stSidebarCollapseButton"],
+    button[data-testid="stSidebarCollapsedControl"] {
+        display: none !important;
+        visibility: hidden !important;
+        pointer-events: none !important;
+    }
+    #hn-sidebar-close {
+        position: fixed;
+        top: 14px;
+        left: 178px;
+        z-index: 99999;
+        background: rgba(255,255,255,0.18);
+        border: 1px solid rgba(255,255,255,0.40);
+        border-radius: 8px;
+        color: #ffffff;
+        font-size: .85rem;
+        font-weight: 800;
+        width: 30px;
+        height: 30px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: monospace;
+        line-height: 1;
+        transition: background .2s;
+    }
+    #hn-sidebar-close:hover { background: rgba(255,255,255,0.32); }
+    #hn-sidebar-open {
+        position: fixed;
+        top: 14px;
+        left: 12px;
+        z-index: 99999;
+        background: #2F80C9;
+        border: none;
+        border-radius: 8px;
+        color: #ffffff;
+        font-size: .85rem;
+        font-weight: 800;
+        width: 34px;
+        height: 34px;
+        cursor: pointer;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.28);
+        font-family: monospace;
+        line-height: 1;
+    }
+    #hn-sidebar-open:hover { background: #1a6bb5; }
+    section[data-testid="stSidebar"].hn-hidden {
+        transform: translateX(-220px) !important;
+        min-width: 0 !important;
+        width: 0 !important;
+        max-width: 0 !important;
+        overflow: hidden !important;
+        transition: transform .28s ease, width .28s ease !important;
+    }
+    </style>
+    <button id="hn-sidebar-close" title="Hide sidebar">&lt;&lt;</button>
+    <button id="hn-sidebar-open"  title="Show sidebar">&gt;&gt;</button>
+    <script>
+    (function() {
+        function init() {
+            var cb = document.getElementById('hn-sidebar-close');
+            var ob = document.getElementById('hn-sidebar-open');
+            var sb = document.querySelector('section[data-testid="stSidebar"]');
+            if (!cb || !ob || !sb) { setTimeout(init, 400); return; }
+            cb.addEventListener('click', function() {
+                sb.classList.add('hn-hidden');
+                ob.style.display = 'flex';
+                cb.style.display = 'none';
+            });
+            ob.addEventListener('click', function() {
+                sb.classList.remove('hn-hidden');
+                ob.style.display = 'none';
+                cb.style.display = 'flex';
+            });
+        }
+        setTimeout(init, 500);
+    })();
+    </script>
+    """, unsafe_allow_html=True)
+
     st.markdown("""<style>
     section[data-testid="stSidebar"],
     section[data-testid="stSidebar"] > div {
