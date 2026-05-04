@@ -274,7 +274,7 @@ def _render_trend_chart(readings: list):
             line_color=t_color,
             line_width=1.4,
             annotation_text=t_label,
-            annotation_position="top left",
+            annotation_position="right",
             annotation_font=dict(size=8, color=t_color),
         )
 
