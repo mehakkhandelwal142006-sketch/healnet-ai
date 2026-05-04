@@ -324,8 +324,7 @@ def _render_trend_chart(readings: list):
         yaxis=dict(
             range=[50, 225],
             gridcolor="rgba(100,160,220,0.12)",
-            title="mmHg",
-            titlefont=dict(size=10),
+            title=dict(text="mmHg", font=dict(size=10)),
             tickfont=dict(size=9),
         ),
         hovermode="x unified",
