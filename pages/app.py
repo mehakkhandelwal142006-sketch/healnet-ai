@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as _stc
 import time
 import datetime
 import smtplib
@@ -56,6 +57,135 @@ except ImportError:
 # ─────────────────────────────────────────────────────
 st.set_page_config(page_title="HealNet AI", page_icon="🏥", layout="wide", initial_sidebar_state="expanded")
 
+# ── Kill keyboard_double via CSS (works from st.markdown) ──
+st.markdown("""
+<style>
+[data-testid="stSidebarCollapseButton"],
+[data-testid="stSidebarCollapsedControl"],
+[data-testid="stSidebarToggleButton"],
+[data-testid="stHeader"], [data-testid="stHeader"] *,
+[data-testid="stDecoration"], [data-testid="stToolbar"],
+section[data-testid="stSidebar"] > div > button,
+section[data-testid="stSidebar"] > div:first-child > button,
+section[data-testid="stSidebar"] button[kind] {
+    display:none!important; visibility:hidden!important;
+    opacity:0!important; pointer-events:none!important;
+    width:0!important; height:0!important;
+    position:absolute!important; top:-9999px!important; left:-9999px!important;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# ── Sidebar toggle tab via components.v1.html (accesses real DOM via window.parent) ──
+_stc.html("""
+<script>
+(function(){
+    var W = 210;
+    var open = true;
+    var doc = window.parent.document;
+
+    /* ── Inject CSS into parent <head> ── */
+    if(!doc.getElementById('hn-style')){
+        var s = doc.createElement('style');
+        s.id = 'hn-style';
+        s.textContent = [
+            /* Kill native buttons */
+            '[data-testid="stSidebarCollapseButton"],[data-testid="stSidebarCollapsedControl"],',
+            '[data-testid="stSidebarToggleButton"],[data-testid="stHeader"],[data-testid="stHeader"] *,',
+            '[data-testid="stDecoration"]{display:none!important;opacity:0!important;',
+            'pointer-events:none!important;width:0!important;height:0!important;',
+            'position:absolute!important;top:-9999px!important;}',
+            /* Toggle tab */
+            '#hn-tab{',
+            'position:fixed!important;top:50vh!important;',
+            'left:'+W+'px!important;',
+            'transform:translateY(-50%)!important;',
+            'z-index:2147483647!important;',
+            'width:22px!important;height:64px!important;',
+            'background:#2F80C9!important;color:#fff!important;',
+            'border:none!important;',
+            'border-radius:0 10px 10px 0!important;',
+            'cursor:pointer!important;',
+            'font-size:14px!important;font-weight:900!important;',
+            'display:flex!important;align-items:center!important;justify-content:center!important;',
+            'box-shadow:4px 2px 12px rgba(0,0,0,0.35)!important;',
+            'padding:0!important;line-height:1!important;',
+            'user-select:none!important;',
+            'visibility:visible!important;opacity:1!important;',
+            '}'
+        ].join('');
+        doc.head.appendChild(s);
+    }
+
+    /* ── Inject toggle button into parent body ── */
+    function inject(){
+        if(doc.getElementById('hn-tab')) return;
+        var btn = doc.createElement('button');
+        btn.id = 'hn-tab';
+        btn.textContent = '◀';
+        btn.title = 'Toggle sidebar';
+        btn.addEventListener('click', toggle);
+        doc.body.appendChild(btn);
+    }
+
+    /* ── Toggle sidebar ── */
+    function toggle(){
+        var sb  = doc.querySelector('section[data-testid="stSidebar"]');
+        var btn = doc.getElementById('hn-tab');
+        if(!sb || !btn) return;
+        open = !open;
+        if(open){
+            sb.style.setProperty('transform','translateX(0)','important');
+            sb.style.setProperty('min-width', W+'px','important');
+            sb.style.setProperty('width',     W+'px','important');
+            sb.style.setProperty('transition','transform .28s ease','important');
+            btn.style.setProperty('left', W+'px','important');
+            btn.textContent = '◀';
+        } else {
+            sb.style.setProperty('transform','translateX(-'+W+'px)','important');
+            sb.style.setProperty('min-width', W+'px','important');
+            sb.style.setProperty('transition','transform .28s ease','important');
+            btn.style.setProperty('left','0px','important');
+            btn.textContent = '▶';
+        }
+    }
+
+    /* ── Kill native buttons in parent DOM ── */
+    function nuke(){
+        var sel = [
+            '[data-testid="stSidebarCollapseButton"]',
+            '[data-testid="stSidebarCollapsedControl"]',
+            '[data-testid="stSidebarToggleButton"]',
+            '[data-testid="stHeader"]',
+            '[data-testid="stDecoration"]',
+            'button[kind="header"]'
+        ].join(',');
+        doc.querySelectorAll(sel).forEach(function(el){
+            el.style.cssText = 'display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important;width:0!important;height:0!important;position:absolute!important;top:-9999px!important;';
+        });
+        /* Kill buttons inside sidebar except ours */
+        var sb = doc.querySelector('section[data-testid="stSidebar"]');
+        if(sb) sb.querySelectorAll('button').forEach(function(b){
+            if(b.id === 'hn-tab') return;
+            b.style.cssText = 'display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important;width:0!important;height:0!important;';
+        });
+    }
+
+    function boot(){ nuke(); inject(); }
+    boot();
+
+    /* Watch parent DOM for Streamlit re-renders */
+    new MutationObserver(boot).observe(doc.body, {childList:true, subtree:true});
+
+    /* Rapid early poll */
+    var n = 0, iv = setInterval(function(){
+        boot();
+        if(++n > 80) clearInterval(iv);
+    }, 50);
+})();
+</script>
+""", height=0)
+
 def _load_css():
     css_path = os.path.join(os.path.dirname(__file__), "healnet_style.css")
     external_css = ""
@@ -69,10 +199,7 @@ def _load_css():
         "@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800"
         "&family=Outfit:wght@400;500;600;700&display=swap');"
 
-        # ── Kill Streamlit header bar ──
-        "[data-testid='stHeader'],[data-testid='stDecoration'],"
-        "[data-testid='stToolbar'],header[data-testid='stHeader']"
-        "{display:none!important;height:0!important;visibility:hidden!important;}"
+        # (header/button kill handled by top-of-page JS block)
 
         # ── Hide auto-generated Streamlit pages nav (camera bp, healnet ai, etc.) ──
         "[data-testid='stSidebarNav']{display:none!important;}"
@@ -117,10 +244,7 @@ def _load_css():
         "{display:block!important;visibility:visible!important;opacity:1!important;"
         "background:transparent!important;width:100%!important;}"
 
-        # Hide ALL native Streamlit sidebar collapse/expand buttons everywhere
-        "button[data-testid='stSidebarCollapseButton'],"
-        "button[data-testid='stSidebarCollapsedControl']"
-        "{display:none!important;visibility:hidden!important;pointer-events:none!important;}"
+        # (sidebar toggle kill handled by top-of-page JS block)
 
         "section[data-testid='stSidebar'] > div:first-child"
         "{width:210px!important;}"
@@ -161,7 +285,7 @@ def _load_css():
         "{background:rgba(255,255,255,0.25)!important;"
         "border-color:rgba(255,255,255,0.55)!important;transform:none!important;}"
 
-        # Sidebar collapse button — hidden (sidebar is always pinned)
+        # (sidebar always controlled by custom hn-tab button)
         "[data-testid='stSidebar'] .sub-label{color:rgba(255,255,255,0.60)!important;}"
 
         # ── Typography ──
@@ -447,18 +571,6 @@ def _load_css():
         "section[data-testid='stSidebar'][aria-expanded='true'],"
         "section[data-testid='stSidebar']:not([aria-expanded='false'])"
         "{transform:translateX(0)!important;}"
-        "button[data-testid='stSidebarCollapseButton'],"
-        "button[data-testid='stSidebarCollapsedControl']"
-        "{display:flex!important;visibility:visible!important;"
-        "position:fixed!important;top:10px!important;left:10px!important;"
-        "z-index:1200!important;width:38px!important;height:38px!important;"
-        "background:#2F80C9!important;border-radius:8px!important;"
-        "box-shadow:0 2px 10px rgba(0,0,0,0.28)!important;"
-        "align-items:center!important;justify-content:center!important;"
-        "border:none!important;cursor:pointer!important;}"
-        "button[data-testid='stSidebarCollapseButton'] svg,"
-        "button[data-testid='stSidebarCollapsedControl'] svg"
-        "{color:#fff!important;fill:#fff!important;stroke:#fff!important;}"
         "[data-testid='stMain'],[data-testid='stMainBlockContainer'],"
         "[data-testid='block-container']"
         "{padding-left:0.8rem!important;padding-right:0.8rem!important;"
@@ -643,93 +755,6 @@ name = user.get("name") or org.get("name") or "User"
 #  SIDEBAR
 # ─────────────────────────────────────────────────────
 with st.sidebar:
-    # ── Custom << / >> sidebar toggle ──
-    st.markdown("""
-    <style>
-    button[data-testid="stSidebarCollapseButton"],
-    button[data-testid="stSidebarCollapsedControl"] {
-        display: none !important;
-        visibility: hidden !important;
-        pointer-events: none !important;
-    }
-    #hn-sidebar-close {
-        position: fixed;
-        top: 14px;
-        left: 178px;
-        z-index: 99999;
-        background: rgba(255,255,255,0.18);
-        border: 1px solid rgba(255,255,255,0.40);
-        border-radius: 8px;
-        color: #ffffff;
-        font-size: .85rem;
-        font-weight: 800;
-        width: 30px;
-        height: 30px;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-family: monospace;
-        line-height: 1;
-        transition: background .2s;
-    }
-    #hn-sidebar-close:hover { background: rgba(255,255,255,0.32); }
-    #hn-sidebar-open {
-        position: fixed;
-        top: 14px;
-        left: 12px;
-        z-index: 99999;
-        background: #2F80C9;
-        border: none;
-        border-radius: 8px;
-        color: #ffffff;
-        font-size: .85rem;
-        font-weight: 800;
-        width: 34px;
-        height: 34px;
-        cursor: pointer;
-        display: none;
-        align-items: center;
-        justify-content: center;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.28);
-        font-family: monospace;
-        line-height: 1;
-    }
-    #hn-sidebar-open:hover { background: #1a6bb5; }
-    section[data-testid="stSidebar"].hn-hidden {
-        transform: translateX(-220px) !important;
-        min-width: 0 !important;
-        width: 0 !important;
-        max-width: 0 !important;
-        overflow: hidden !important;
-        transition: transform .28s ease, width .28s ease !important;
-    }
-    </style>
-    <button id="hn-sidebar-close" title="Hide sidebar">&lt;&lt;</button>
-    <button id="hn-sidebar-open"  title="Show sidebar">&gt;&gt;</button>
-    <script>
-    (function() {
-        function init() {
-            var cb = document.getElementById('hn-sidebar-close');
-            var ob = document.getElementById('hn-sidebar-open');
-            var sb = document.querySelector('section[data-testid="stSidebar"]');
-            if (!cb || !ob || !sb) { setTimeout(init, 400); return; }
-            cb.addEventListener('click', function() {
-                sb.classList.add('hn-hidden');
-                ob.style.display = 'flex';
-                cb.style.display = 'none';
-            });
-            ob.addEventListener('click', function() {
-                sb.classList.remove('hn-hidden');
-                ob.style.display = 'none';
-                cb.style.display = 'flex';
-            });
-        }
-        setTimeout(init, 500);
-    })();
-    </script>
-    """, unsafe_allow_html=True)
-
     st.markdown("""<style>
     section[data-testid="stSidebar"],
     section[data-testid="stSidebar"] > div {
@@ -752,10 +777,6 @@ with st.sidebar:
         width: 100% !important;
         position: relative !important;
         z-index: 2 !important;
-    }
-    button[data-testid="stSidebarCollapseButton"],
-    button[data-testid="stSidebarCollapsedControl"] {
-        display: none !important;
     }
     /* Scrollbar — always visible */
     section[data-testid="stSidebar"]::-webkit-scrollbar { width: 5px !important; }
@@ -859,7 +880,7 @@ with st.sidebar:
                   margin-bottom:12px;"></div>
     </div>""")
 
-    nav_options = ["Dashboard","Patient Management","Health Monitoring","Report Analysis","Pupil Detection","Camera Vitals","BP Camera"]
+    nav_options = ["Dashboard","Patient Management","Health Monitoring","Report Analysis","Smartwatch Data","Pupil Detection","Camera Vitals","BP Camera"]
     sel_nav = st.radio("Navigation", nav_options,
                        index=nav_options.index(st.session_state.page) if st.session_state.page in nav_options else 0,
                        label_visibility="collapsed")
@@ -2170,6 +2191,199 @@ elif page == "Camera Vitals":
 elif page == "BP Camera":
     breadcrumb(["Dashboard", "BP Camera"], "BP Camera")
     render_camera_bp_page()
+
+
+elif page == "Smartwatch Data":
+    breadcrumb(["Dashboard", "Smartwatch Data"], "Smartwatch Data")
+
+    st.markdown("""
+    <div style='display:flex;align-items:center;gap:12px;margin-bottom:6px;'>
+        <span style='font-size:2rem;'>⌚</span>
+        <h1 style='margin:0;font-size:1.8rem;font-weight:700;color:#0a2540;'>Smartwatch Data</h1>
+    </div>
+    <p style='color:#4a6fa5;margin-bottom:24px;font-size:.97rem;'>
+        Upload exported health data from your smartwatch (Apple Health, Fitbit, Samsung Health, Garmin, Google Fit).
+    </p>
+    <hr style='border:none;border-top:1px solid rgba(100,160,220,0.25);margin-bottom:24px;'>
+    """, unsafe_allow_html=True)
+
+    # ── How to export guide ──
+    with st.expander("📖  How to export data from your smartwatch app?"):
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("""
+            **🍎 Apple Health (iPhone)**
+            1. Open the **Health** app
+            2. Tap your profile picture (top right)
+            3. Scroll down → tap **Export All Health Data**
+            4. Extract the ZIP → find `exportRecord.csv`
+            5. Upload that file below
+
+            **📱 Samsung Health**
+            1. Open **Samsung Health**
+            2. Tap the three lines (menu) → **Settings**
+            3. Scroll to **Download personal data**
+            4. Download and upload the CSV below
+            """)
+        with col2:
+            st.markdown("""
+            **🏃 Fitbit**
+            1. Go to **fitbit.com** on a browser
+            2. Click your profile → **Settings**
+            3. Scroll to **Export Account Archive**
+            4. Extract ZIP → upload CSV files below
+
+            **⌚ Garmin**
+            1. Go to **connect.garmin.com**
+            2. Click your name → **Account Settings**
+            3. Scroll to **Export Your Data**
+            4. Upload the CSV below
+
+            **🤖 Google Fit**
+            1. Go to **takeout.google.com**
+            2. Select **Fit** → Download
+            3. Extract and upload CSV below
+            """)
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # ── File Upload ──
+    uploaded_file = st.file_uploader(
+        "📂  Upload your smartwatch CSV file",
+        type=["csv"],
+        help="Upload a CSV exported from Apple Health, Fitbit, Samsung Health, Garmin or Google Fit"
+    )
+
+    if uploaded_file:
+        import pandas as pd
+        import plotly.express as px
+        import plotly.graph_objects as go
+        import io
+
+        try:
+            df = pd.read_csv(uploaded_file, on_bad_lines='skip', low_memory=False)
+
+            # ── Normalize column names ──
+            df.columns = [c.strip().lower().replace(" ", "_") for c in df.columns]
+
+            # ── Detect date column ──
+            date_col = next((c for c in df.columns if any(k in c for k in
+                ["date","time","start","timestamp","datetime"])), None)
+            if date_col:
+                df[date_col] = pd.to_datetime(df[date_col], errors='coerce')
+                df = df.dropna(subset=[date_col]).sort_values(date_col)
+                df["date_only"] = df[date_col].dt.date
+
+            # ── Detect health columns ──
+            def find_col(keywords):
+                for k in keywords:
+                    for c in df.columns:
+                        if k in c:
+                            return c
+                return None
+
+            hr_col    = find_col(["heart_rate","heartrate","bpm","pulse"])
+            steps_col = find_col(["steps","step_count","step"])
+            sleep_col = find_col(["sleep","sleep_duration","sleep_hours"])
+            spo2_col  = find_col(["spo2","oxygen","blood_oxygen","o2"])
+            cal_col   = find_col(["calorie","calories","energy"])
+
+            detected = [c for c in [hr_col, steps_col, sleep_col, spo2_col, cal_col] if c]
+
+            st.success(f"✅ File uploaded successfully — **{len(df):,} records** found!")
+
+            # ── Summary cards ──
+            st.markdown("<br>", unsafe_allow_html=True)
+            c1, c2, c3, c4 = st.columns(4)
+
+            def safe_avg(col):
+                if col and col in df.columns:
+                    vals = pd.to_numeric(df[col], errors='coerce').dropna()
+                    return round(vals.mean(), 1) if len(vals) > 0 else "—"
+                return "—"
+
+            with c1:
+                val = safe_avg(hr_col)
+                st.metric("❤️ Avg Heart Rate", f"{val} bpm" if val != "—" else "—")
+            with c2:
+                val = safe_avg(steps_col)
+                st.metric("🚶 Avg Daily Steps", f"{val:,}" if val != "—" else "—")
+            with c3:
+                val = safe_avg(spo2_col)
+                st.metric("🩸 Avg SpO2", f"{val}%" if val != "—" else "—")
+            with c4:
+                val = safe_avg(cal_col)
+                st.metric("🔥 Avg Calories", f"{val} kcal" if val != "—" else "—")
+
+            st.markdown("<br>", unsafe_allow_html=True)
+
+            # ── Charts ──
+            if date_col and detected:
+                tabs = []
+                if hr_col:    tabs.append("❤️ Heart Rate")
+                if steps_col: tabs.append("🚶 Steps")
+                if sleep_col: tabs.append("😴 Sleep")
+                if spo2_col:  tabs.append("🩸 SpO2")
+                if cal_col:   tabs.append("🔥 Calories")
+
+                tab_objs = st.tabs(tabs)
+                tab_idx = 0
+
+                def plot_chart(tab, col, label, color, chart_type="line"):
+                    with tab:
+                        d = df[[date_col, col]].copy()
+                        d[col] = pd.to_numeric(d[col], errors='coerce')
+                        d = d.dropna().groupby(d[date_col].dt.date)[col].mean().reset_index()
+                        d.columns = ["Date", label]
+                        if chart_type == "bar":
+                            fig = px.bar(d, x="Date", y=label, color_discrete_sequence=[color])
+                        else:
+                            fig = px.line(d, x="Date", y=label, color_discrete_sequence=[color],
+                                         markers=True)
+                        fig.update_layout(
+                            plot_bgcolor="rgba(0,0,0,0)",
+                            paper_bgcolor="rgba(0,0,0,0)",
+                            font=dict(family="Nunito"),
+                            margin=dict(t=20, b=20),
+                            xaxis=dict(showgrid=False),
+                            yaxis=dict(gridcolor="rgba(100,160,220,0.15)")
+                        )
+                        st.plotly_chart(fig, use_container_width=True)
+
+                if hr_col:
+                    plot_chart(tab_objs[tabs.index("❤️ Heart Rate")], hr_col, "Heart Rate (bpm)", "#e74c3c")
+                if steps_col:
+                    plot_chart(tab_objs[tabs.index("🚶 Steps")], steps_col, "Steps", "#2ecc71", "bar")
+                if sleep_col:
+                    plot_chart(tab_objs[tabs.index("😴 Sleep")], sleep_col, "Sleep (hrs)", "#9b59b6")
+                if spo2_col:
+                    plot_chart(tab_objs[tabs.index("🩸 SpO2")], spo2_col, "SpO2 (%)", "#3498db")
+                if cal_col:
+                    plot_chart(tab_objs[tabs.index("🔥 Calories")], cal_col, "Calories (kcal)", "#e67e22", "bar")
+            else:
+                st.info("ℹ️ Could not detect standard health columns automatically. Showing raw data below.")
+
+            # ── Raw data table ──
+            st.markdown("<br>", unsafe_allow_html=True)
+            with st.expander("📋  View Raw Data"):
+                st.dataframe(df.head(500), use_container_width=True)
+
+        except Exception as e:
+            st.error(f"❌ Could not read the file: {e}. Please make sure it's a valid CSV export from your smartwatch app.")
+
+    else:
+        # ── Empty state ──
+        st.markdown("""
+        <div style='text-align:center;padding:60px 20px;background:rgba(255,255,255,0.45);
+        border-radius:16px;border:1.5px dashed rgba(100,160,220,0.40);margin-top:10px;'>
+            <div style='font-size:3rem;margin-bottom:12px;'>⌚</div>
+            <h3 style='color:#0a2540;margin-bottom:8px;'>No file uploaded yet</h3>
+            <p style='color:#4a6fa5;font-size:.9rem;'>
+                Export your health data as CSV from your smartwatch app and upload it above.<br>
+                Supports Apple Health, Fitbit, Samsung Health, Garmin and Google Fit.
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
 
 
 st.markdown("""
